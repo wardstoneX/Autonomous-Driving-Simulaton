@@ -4,9 +4,9 @@
  */
 
 import <std_connector.camkes>;
+#include "EntropySource/camkes/EntropySource.camkes"
 
 #include "system_config.h"
-
 #include "components/TPM/TPM.camkes"
 #include "components/TestApp/TestApp.camkes"
 
@@ -14,6 +14,11 @@ assembly {
   composition {
     component	TPM 	tpm;
     component	TestApp	testApp;
+
+    EntropySource_INSTANCE_CONNECT_CLIENT(
+	tpm,
+	testApp.entropy_rpc, testApp.entropy_dp
+    )
   }
 
   configuration {

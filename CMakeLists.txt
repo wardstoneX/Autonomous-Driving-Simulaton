@@ -17,6 +17,8 @@ DeclareCAmkESComponent(
   C_FLAGS
       -Wall
       -Werror
+  LIBS
+      os_core_api
 )
 
 DeclareCAmkESComponent(
@@ -26,7 +28,10 @@ DeclareCAmkESComponent(
   C_FLAGS
       -Wall
       -Werror
+  LIBS
+      lib_debug
+      os_core_api
 )
 
-DeclareAndCreateCamkESSystem(demo_tum_course.camkes)
+DeclareAndCreateCamkESSystem(demo_tpm.camkes)
 GenerateSimulateScript()

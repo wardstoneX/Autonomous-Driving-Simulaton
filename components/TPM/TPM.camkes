@@ -1,4 +1,6 @@
+#include <if_OS_Entropy.camkes>
+
 component TPM {
   provides	if_OS_Entropy	entropy_rpc;
-  dataport	Buf		entropy_dp;
+  dataport	Buf		entropy_port;
 };
