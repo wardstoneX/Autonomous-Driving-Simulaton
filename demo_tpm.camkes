@@ -1,0 +1,21 @@
+/*
+ * TPM: Component that provides an interface to the TPM
+ * TestApp: Program that tests the TPM component
+ */
+
+import <std_connector.camkes>;
+
+#include "system_config.h"
+
+#include "components/TPM/TPM.camkes"
+#include "components/TestApp/TestApp.camkes"
+
+assembly {
+  composition {
+    component	TPM 	tpm;
+    component	TestApp	testApp;
+  }
+
+  configuration {
+  }
+}

@@ -1,0 +1,14 @@
+/*
+ * Copyright (C) 2021, HENSOLDT Cyber GmbH
+ */
+
+import <if_OS_Storage.camkes>;
+#include <if_OS_Socket.camkes>
+
+component TestApp {
+  control;
+
+  // For connecting TPM RNG
+  uses		if_OS_Entropy	entropy_rpc;
+  dataport	Buf		entropy_dp;
+};

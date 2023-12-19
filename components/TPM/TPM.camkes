@@ -1,0 +1,4 @@
+component TPM {
+  provides	if_OS_Entropy	entropy_rpc;
+  dataport	Buf		entropy_dp;
+};
