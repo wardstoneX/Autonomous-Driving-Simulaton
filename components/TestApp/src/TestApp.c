@@ -260,7 +260,6 @@ int run()
     buffer[sizeof(buffer) - 1] = '\0';
     Debug_LOG_INFO("Got HTTP Page:\n%s", buffer);
 
-    memcpy(fileData, buffer, sizeof(fileData));
 
     OS_Socket_close(hSocket);
 
