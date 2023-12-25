@@ -1,4 +1,4 @@
-# ws2023_team_3_ads_tpm
+# ws2023_team_projects
 
 
 
@@ -15,14 +15,14 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 
 ```
 cd existing_repo
-git remote add origin https://gitlab.lrz.de/f13_sel4_trentos/ws2023_team_3_ads_tpm.git
+git remote add origin https://gitlab.lrz.de/f13_sel4_trentos/ws2023_team_projects.git
 git branch -M main
 git push -uf origin main
 ```
 
 ## Integrate with your tools
 
-- [ ] [Set up project integrations](https://gitlab.lrz.de/f13_sel4_trentos/ws2023_team_3_ads_tpm/-/settings/integrations)
+- [ ] [Set up project integrations](https://gitlab.lrz.de/f13_sel4_trentos/ws2023_team_projects/-/settings/integrations)
 
 ## Collaborate with your team
 
