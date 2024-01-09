@@ -275,8 +275,8 @@ secureCommunication_rpc_socket_sendto(
 OS_Error_t
 secureCommunication_rpc_socket_recvfrom(
     int                 handle,
-    size_t              pLen,
-    OS_Socket_Addr_t    srcAddr
+    size_t*              pLen,
+    OS_Socket_Addr_t*    srcAddr
 )
 {
     //TODO: decrypt the message before from the networkstack before returning it
@@ -314,7 +314,7 @@ secure_Communication_socket_getStatus(
 OS_Error_t
 secureCommunication_rpc_socket_getPendingEvents(
     size_t  bufSize,
-    int     pNumberOfEvents
+    int*     pNumberOfEvents
 )
 {
     //return networkStack_rpc_socket_getPendingEvents(bufSize, pNumberOfEvents);
