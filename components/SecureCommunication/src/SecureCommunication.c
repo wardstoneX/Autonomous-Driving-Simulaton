@@ -68,7 +68,7 @@ secureCommunication_rpc_socket_create(
  * @param[in] handle Handle of the socket that should be closed.
  */
 OS_Error_t
-secure_Communication_socket_close(
+secureCommunication_rpc_socket_close(
     const int handle
 )
 {
@@ -94,7 +94,7 @@ secure_Communication_socket_close(
  *                       returns.
  */
 OS_Error_t
-secure_Communication_socket_write(
+secureCommunication_rpc_socket_write(
     const int    handle,
     size_t* const pLen
 )
@@ -146,7 +146,7 @@ secureCommunication_rpc_socket_read(
  * @param[in] dstAddr Address of the destination to connect to.
  */
 OS_Error_t
-secure_Communication_socket_connect(
+secureCommunication_rpc_socket_connect(
     const int handle,
     const OS_Socket_Addr_t* const dstAddr
 )
@@ -214,7 +214,7 @@ secureCommunication_rpc_socket_listen(
  * @param[in] localAddr Address to bind the socket to.
  */
 OS_Error_t
-secure_Communication_socket_bind(
+secureCommunication_rpc_socket_bind(
     const int              handle,
     const OS_Socket_Addr_t* const localAddr
 )
@@ -292,7 +292,7 @@ secureCommunication_rpc_socket_recvfrom(
      * @retval FATAL_ERROR   Network Stack has experienced a fatal error.
  */
 OS_NetworkStack_State_t
-secure_Communication_socket_getStatus(
+secureCommunication_rpc_socket_getStatus(
     void)
 {
     //return networkStack_rpc_socket_getStatus();
