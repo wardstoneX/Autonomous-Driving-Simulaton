@@ -23,37 +23,40 @@ def gnss_callback(data, name):
     if name == "vehicle":
         main_vehicle_coordinates = convert_gps_to_carla(data)
         rounded_main_vehicle_coordinates = np.round(main_vehicle_coordinates, 1)
-        print(f"Main Vehicle: {rounded_main_vehicle_coordinates}")
+       # print(f"Main Vehicle: {rounded_main_vehicle_coordinates}")
     else:
         vehicle1_coordinates = convert_gps_to_carla(data)
         rounded_vehicle1_coordinates = np.round(vehicle1_coordinates, 1)
-        print(f"Vehicle1: {rounded_vehicle1_coordinates}")
+        #print(f"Vehicle1: {rounded_vehicle1_coordinates}")
 
 detected_vehicles = {}
 
-def obstacle_callback(event):
-    global park_spot_found
+def obstacle_callback(event, dict):
     vehicle = event.actor.parent
-    length_vehicle = vehicle.bounding_box.extent.x*2
-
     other_vehicle = event.other_actor
-    other_vehicle_role = other_vehicle.attributes['role_name'];
-    if other_vehicle.id not in detected_vehicles:
+    distance = event.distance
+    #print(event.distance)
+
+    prev_distance = dict["distance"][-1]
+
+    distance_difference = distance - prev_distance
+   # print(event.distance, dict["distance"][-1] )
+    #print(prev_distance, distance)
+    dt = round(abs(distance_difference), 3)
+    if dt > 0.1:
+        print(round(abs(distance_difference), 3), other_vehicle.attributes['role_name'], distance_difference, event.distance, dict["distance"][-1])
+        world.debug.draw_string(vehicle.get_location(), str(dt), color = carla.Color(r=0, g=0, b=0), life_time=60)
+        print(event.timestamp)
+        print("\n")
     
-        
-        if detected_vehicles:
-            vehicle_behind = list(detected_vehicles.values())[-1]
-            print(f"The vehicle in the front is {other_vehicle.attributes['role_name']} and its location is {other_vehicle.get_location()}.")
-            print(f"The vehicle in the behind is {vehicle_behind.attributes['role_name']} and its location is {vehicle_behind.get_location()}.")
+    #if(distance_difference )
 
-            
-            distance = other_vehicle.get_location().x - vehicle_behind.get_location().x - length_vehicle
 
-            print(f"The distance is {distance}.")
-            if distance > 5:
-                print("Park spit found!")
-                park_spot_found = True
-        detected_vehicles[other_vehicle.id] = other_vehicle
+
+    world.debug.draw_line(vehicle.get_location(), other_vehicle.get_location(), color=carla.Color(r=255, g=255, b=255), life_time=60)
+
+    #world.debug.draw_string(vehicle.get_location(), str(event.distance), color = carla.Color(r=0, g=0, b=0), life_time=5)
+    dict["distance"].append(distance)
        
        
 
@@ -116,7 +119,9 @@ try:
 
     transform = carla.Transform(carla.Location(x=x_position, y=y2_position, z=z_position),
                                 carla.Rotation(pitch=pitch, yaw=yaw, roll=roll))
-
+    
+    
+    # [0, 5, 12, 20, 25, 33, 43, 49]
     x_offsets = [0, 5, 12, 20, 25, 33, 43, 49]
     vehicle_list = []
     vehicle_index = 0
@@ -133,43 +138,53 @@ try:
     
     vehicle_bp.set_attribute('role_name', 'main_vehicle')
     vehicle = world.spawn_actor(vehicle_bp, transform)
-    print(f"The length of the vehicle is {vehicle.bounding_box.extent.x*2}.")
+  #  vehicle1 = world.spawn_actor(vehicle_bp, transform1)
+   # print(f"The length of the vehicle is {vehicle.bounding_box.extent.x*2}.")
     
     
     gnss_bp = bp_lib.find('sensor.other.gnss')
-    gnss_bp.set_attribute('sensor_tick', '1.0')
+    gnss_bp.set_attribute('sensor_tick', '0.2')
     
     gnss_sensor = world.spawn_actor(gnss_bp, carla.Transform(), attach_to=vehicle)
     gnss_sensor1 = world.spawn_actor(gnss_bp, carla.Transform(), attach_to=vehicle_list[0])
    
    # vehicle_list[0].set_attribute("name", "vehicle")
     obstacle_bp = bp_lib.find('sensor.other.obstacle')
-    obstacle_bp.set_attribute('hit_radius','8.0')
-    obstacle_bp.set_attribute('distance','5.0')
+    obstacle_bp.set_attribute('hit_radius','5.0')
+    obstacle_bp.set_attribute('distance','20.0')
     obstacle_bp.set_attribute("only_dynamics",str(True))
 
     #obstacle_bp.set_attribute('debug_linetrace',str(True))
-    obstacle_bp.set_attribute('sensor_tick','0.4')
+    obstacle_bp.set_attribute('sensor_tick','0.07')
     
     obs_location = carla.Location(0,0,0)
-    obs_rotation = carla.Rotation(0,0,0)
+    obs_rotation = carla.Rotation(pitch=0,yaw=90,roll=0)
     obs_transform = carla.Transform(obs_location,obs_rotation) 
     obstacle_sensor = world.spawn_actor(obstacle_bp, obs_transform, attach_to=vehicle)
 
 
-    obstacle_sensor.listen(lambda event: obstacle_callback(event))
+
+
+    sensor_data = {'distance': [0]}
+                
+
+    obstacle_sensor.listen(lambda event: obstacle_callback(event, sensor_data))
 
    # gnss_sensor.listen(lambda data: gnss_callback(data, "vehicle"))
     #gnss_sensor1.listen(lambda data: gnss_callback(data, "vehicle1"))
+
+    vehicle.apply_control(carla.VehicleControl(throttle=0.5, steer=0))
  
-    while not park_spot_found:
-        
-        vehicle.apply_control(carla.VehicleControl(throttle=0.3, steer=0.0))
+   # while not park_spot_found:
+      #  
+      #  vehicle.apply_control(carla.VehicleControl(throttle=0.3, steer=0.0))
 
-    print(park_spot_found, "Applying break")
-    vehicle.apply_control(carla.VehicleControl(throttle=0.0,brake=1.0))
+   # print(park_spot_found, "Applying break")
+    #vehicle.apply_control(carla.VehicleControl(throttle=0.0,brake=1.0))
 
-    time.sleep(25)
+    print(sensor_data)
+
+    time.sleep(60)
 
 
 
