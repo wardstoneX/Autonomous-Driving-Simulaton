@@ -1,4 +1,4 @@
-/* Definitions of all the constants needed for interfacint with the TPM */
+/* Definitions of all the constants needed for interfacing with the TPM */
 
 /* Read if first bit on wire is set, write otherwise
  * See TPM Interface Specification, pages 103-104
