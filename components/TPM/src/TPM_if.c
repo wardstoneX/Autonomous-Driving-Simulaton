@@ -12,7 +12,8 @@
  */
 void TPM_Read(uint32_t addr, char *buf, unsigned len) {
   char txBuf[MAX_SPI_FRAMESIZE+TPM_HEADER_SIZE] = {0};
-  char rxBuf[MAX_SPI_FRAMESIZE+TPM_HEADER_SIZE] = {0};
+//  char rxBuf[MAX_SPI_FRAMESIZE+TPM_HEADER_SIZE] = {0};
+  Debug_LOG_DEBUG("TPM Read of size %d at addr %p", len, (void*) addr);
 
   /* First byte:
    *  Bit 7: read => 1, write => 0
@@ -28,9 +29,8 @@ void TPM_Read(uint32_t addr, char *buf, unsigned len) {
   /* Now perform the actual SPI transfer */
   /* TODO: Do we need to check wait states? I remember some comment claiming
    * that the Infineon devices guarantee no wait state, but not sure... */
-  bcm2837_spi_transfernb(txBuf, rxBuf, len + TPM_HEADER_SIZE);
+  bcm2837_spi_transfernb(txBuf, buf, len);
   /* TODO: wolfTPM cuts off the first TPM_HEADER_SIZE bytes. Why? */
-  memcpy(buf, rxBuf + TPM_HEADER_SIZE, len);
 }
 
 void TPM_Write(uint32_t addr, char *buf, unsigned len) {
@@ -49,7 +49,8 @@ void TPM_Write(uint32_t addr, char *buf, unsigned len) {
   /* After that, the data that we want to send */
   memcpy(txBuf + TPM_HEADER_SIZE, buf, len);
   
-  bcm2837_spi_writenb(txBuf, len + TPM_HEADER_SIZE);
+  /* TODO: wolfTPM cuts off the first TPM_HEADER_SIZE bytes. Why? */
+  bcm2837_spi_writenb(txBuf, len);
 }
 
 int TPM_Init(void) {
@@ -73,6 +74,7 @@ int TPM_Init(void) {
   char access = 0;
   do {
     TPM_Read(TPM_ACCESS(0), &access, sizeof(access));
+    Debug_LOG_DEBUG("Got: %hhx", access);
   } while (!((access & TPM_ACCESS_VALID) && (access != 0xFF)));
 
   /* Request locality*/
