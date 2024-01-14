@@ -55,8 +55,7 @@ void TPM_Write(uint32_t addr, char *buf, unsigned len) {
   /* After that, the data that we want to send */
   memcpy(txBuf + TPM_HEADER_SIZE, buf, len);
   
-  /* TODO: wolfTPM cuts off the first TPM_HEADER_SIZE bytes. Why? */
-  bcm2837_spi_writenb(txBuf, len);
+  bcm2837_spi_writenb(txBuf, len + TPM_HEADER_SIZE);
 }
 
 int TPM_Init(void) {
@@ -70,9 +69,9 @@ int TPM_Init(void) {
    */
   bcm2837_spi_setClockDivider(BCM2837_SPI_CLOCK_DIVIDER_16);
   bcm2837_spi_chipSelect(BCM2837_SPI_CS1);
-//  bcm2837_spi_setChipSelectPolarity(BCM2837_SPI_CS1, 0); // TODO: confirm
+  bcm2837_spi_setChipSelectPolarity(BCM2837_SPI_CS1, 1); // TODO: confirm
 
-  /* GPIO 18 needs to be high */
+  /* Pin 18 (GPIO 24) needs to be high */
   bcm2837_gpio_fsel(RPI_GPIO_P1_18, 1); /* set as output pin */
   bcm2837_gpio_set(RPI_GPIO_P1_18); /* set high */
 
