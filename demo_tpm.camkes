@@ -13,14 +13,18 @@ import <std_connector.camkes>;
 assembly {
   composition {
     component	TPM 	tpm;
+    component	TPM_HW 	tpm_hw;
     component	TestApp	testApp;
 
     EntropySource_INSTANCE_CONNECT_CLIENT(
 	tpm,
 	testApp.entropy_rpc, testApp.entropy_dp
     )
+
+    TPM_HW_CONNECT(tpm, tpm_hw)
   }
 
   configuration {
+    TPM_HW_CONFIGURE_SELF(tpm_hw)
   }
 }
