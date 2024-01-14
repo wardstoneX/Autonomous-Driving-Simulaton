@@ -12,7 +12,7 @@
  */
 void TPM_Read(uint32_t addr, char *buf, unsigned len) {
   char txBuf[MAX_SPI_FRAMESIZE+TPM_HEADER_SIZE] = {0};
-//  char rxBuf[MAX_SPI_FRAMESIZE+TPM_HEADER_SIZE] = {0};
+  char rxBuf[MAX_SPI_FRAMESIZE+TPM_HEADER_SIZE] = {0};
   Debug_LOG_DEBUG("TPM Read of size %d at addr %p", len, (void*) addr);
 
   /* First byte:
@@ -21,7 +21,7 @@ void TPM_Read(uint32_t addr, char *buf, unsigned len) {
    *  Bit 5-0: size of xfer - 1
    */
   txBuf[0] = TPM_READ | ((len & 0xFF) - 1);
-  /* Next 4 bytes: address, in big endian */
+  /* Next 3 bytes: address, in big endian */
   txBuf[1] = (addr>>16) & 0xFF;
   txBuf[2] = (addr>>8)  & 0xFF;
   txBuf[3] = (addr)     & 0xFF;
@@ -29,8 +29,14 @@ void TPM_Read(uint32_t addr, char *buf, unsigned len) {
   /* Now perform the actual SPI transfer */
   /* TODO: Do we need to check wait states? I remember some comment claiming
    * that the Infineon devices guarantee no wait state, but not sure... */
-  bcm2837_spi_transfernb(txBuf, buf, len);
-  /* TODO: wolfTPM cuts off the first TPM_HEADER_SIZE bytes. Why? */
+  bcm2837_spi_transfernb(txBuf, rxBuf, len);
+  /* According to RPi_SPI_Flash.c:
+   *   We can't use the rx_buffer directly, because bcm2837_spi_transfernb()
+   *   already populates it when sending the tx bytes. The actual data received
+   *   starts at offset tx_len then.
+   * In this case, the data that was sent is always TPM_HEADER_SIZE bytes long.
+   */
+  memcpy(buf, rxBuf + TPM_HEADER_SIZE, len);
 }
 
 void TPM_Write(uint32_t addr, char *buf, unsigned len) {
