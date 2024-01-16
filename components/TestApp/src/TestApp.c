@@ -23,13 +23,13 @@
 
 
 //by using the secureCommunication prefix, the app will talk to the secCom component through the socket API
-/*
+
 static const if_OS_Socket_t networkStackCtx =
     IF_OS_SOCKET_ASSIGN(secureCommunication);
-    */
+    
 
 //------------------------------------------------------------------------------
-/*
+
 static OS_Error_t
 waitForNetworkStackInit(
     const if_OS_Socket_t* const ctx)
@@ -55,7 +55,8 @@ waitForNetworkStackInit(
         seL4_Yield();
     }
 }
-*/
+
+
 
 /*
 static OS_Error_t
@@ -167,8 +168,6 @@ int run()
 {
     Debug_LOG_INFO("Starting test_app_server...");
 
-    /*
-
     // Check and wait until the NetworkStack component is up and running.
     OS_Error_t ret = waitForNetworkStackInit(&networkStackCtx);
     if (OS_SUCCESS != ret)
@@ -176,6 +175,7 @@ int run()
         Debug_LOG_ERROR("waitForNetworkStackInit() failed with: %d", ret);
         return -1;
     }
+    /*
 
     OS_Socket_Handle_t hSocket;
     ret = OS_Socket_create(

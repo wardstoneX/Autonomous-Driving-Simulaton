@@ -1,22 +1,18 @@
 #include <if_OS_Socket.camkes>
 import <if_OS_Entropy.camkes>;
 
-/*
-#include "OS_Error.h"
-#include "interfaces/if_OS_Socket.h"
-#include "network/OS_SocketTypes.h"
-*/
 
 component SecureCommunication {
     //provides socket functionality to TestApp
-    /*
-    provides    if_OS_Socket    sc_rpc;
-    dataport    Buf             sc_dp;
-    */
     IF_OS_SOCKET_PROVIDE(secureCommunication)
 
     //networking connection to the networkStack
     IF_OS_SOCKET_USE(networkStack)
+
+    uses        if_OS_Entropy   entropy_rpc;
+    dataport    Buf             entropy_dp;
+
+
 
     //needed for en-/decryption
     /*
@@ -27,10 +23,4 @@ component SecureCommunication {
     uses        if_Crypto       crypto_rpc;
     dataport    Buf             crypto_dp;
     */
-
-    
-    uses        if_OS_Entropy   entropy_rpc;
-    dataport    Buf             entropy_dp;
-    
-    
 }

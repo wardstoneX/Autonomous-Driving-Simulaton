@@ -52,6 +52,8 @@ DeclareCAmkESComponent(
         -Wall
         -Werror
     LIBS
+        os_core_api
+        os_socket_client
         os_crypto
 )
 
@@ -66,7 +68,6 @@ DeclareCAmkESComponent(
         system_config
         lib_debug
         os_core_api
-        os_filesystem
         os_socket_client
         os_crypto
 )
