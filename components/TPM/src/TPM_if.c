@@ -175,8 +175,8 @@ TPM_RC TPM_SendPacket(TPM2_Packet* packet) {
   /* Read response */
   Debug_LOG_DEBUG("Reading response from the TPM");
   pos = 0;
-  int rspSz = TPM_HEADER_SIZE; /* Real size of data will be extracted
-				  from TPM header */
+  int rspSz = TPM_COMM_HEADER_SIZE; /* Real size of data will be extracted
+				       from TPM header */
   while (pos < rspSz) {
     TPM_WaitForStatus(TPM_STS_DATA_AVAIL, TPM_STS_DATA_AVAIL);
     TPM_Read(TPM_BURST_COUNT(0), &burstCount, sizeof(burstCount));
@@ -189,7 +189,7 @@ TPM_RC TPM_SendPacket(TPM2_Packet* packet) {
     Debug_DUMP_DEBUG(packet->buf + pos, xferSz);
     pos += xferSz;
 
-    if (pos == TPM_HEADER_SIZE) {
+    if (pos == TPM_COMM_HEADER_SIZE) {
       /* Extract real size from header, then keep reading data */
       uint32_t tmpSz;
       memcpy(&tmpSz, packet->buf + 2, sizeof(uint32_t));
