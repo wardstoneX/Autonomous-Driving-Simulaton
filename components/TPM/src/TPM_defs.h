@@ -10,6 +10,9 @@
 #define TPM_READ	0x80
 #define TPM_WRITE	0x00
 
+/* Size of the buffer where commands and responses are stored */
+#define CMD_BUF_SIZE MAX_SPI_FRAMESIZE
+
 #define TPM_HEADER_SIZE		4	/* Header size for SPI */
 #define TPM_COMM_HEADER_SIZE	10	/* Header size for TPM commands */
 

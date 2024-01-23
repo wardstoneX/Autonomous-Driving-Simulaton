@@ -8,7 +8,6 @@
 #include "TPM_defs.h"
 #include "TPM_packet.h"
 
-#define CMD_BUF_SIZE MAX_SPI_FRAMESIZE
 char cmdBuf[CMD_BUF_SIZE];
 
 /* To some extent, adapted from TPM2_TIS_READ in wolfTPM's tpm2_tis.c.
@@ -207,21 +206,28 @@ TPM_RC TPM_SendPacket(TPM2_Packet* packet) {
   TPM_Write(TPM_STS(0), &status, sizeof(status));
 
   /* Check response code of the TPM's response */
-  uint16_t tmpRc;
-  memcpy(&tmpRc, packet->buf + 6, sizeof(uint16_t));
-  Debug_LOG_DEBUG("Got RC: %x", tmpRc);
+  uint32_t rc;
+  memcpy(&rc, packet->buf + 6, sizeof(uint32_t));
+  /* TODO: Not 100% sure whether it's Big Endian. TPM TIS spec page 105 seems
+   *       to indicate that, but I'm not sure whether it applies here.
+   */
+  rc = TPM2_Packet_SwapU32(rc);
+  Debug_LOG_DEBUG("Got RC: %x", rc);
 
-  return TPM_RC_SUCCESS;
+  /* Update packet information */
+  packet->size = rspSz;
+  packet->pos = TPM_COMM_HEADER_SIZE;
+
+  return rc;
 }
 
-TPM_RC TPM_SendCommandU16(TPM_CC cmd, uint16_t arg) {
+TPM_RC TPM_SendCommandU16(TPM_CC cmd, uint16_t arg, TPM2_Packet *packet) {
   TPM_RC rc;
-  TPM2_Packet packet;
-  TPM2_Packet_InitBuf(&packet, cmdBuf, sizeof(cmdBuf));
-  TPM2_Packet_AppendU16(&packet, arg);
+  TPM2_Packet_InitBuf(packet, cmdBuf, sizeof(cmdBuf));
+  TPM2_Packet_AppendU16(packet, arg);
   /* TODO: Do we ever need TPM_ST_SESSIONS? */
-  TPM2_Packet_Finalize(&packet, TPM_ST_NO_SESSIONS, cmd);
-  rc = TPM_SendPacket(&packet);
+  TPM2_Packet_Finalize(packet, TPM_ST_NO_SESSIONS, cmd);
+  rc = TPM_SendPacket(packet);
   if (rc != TPM_RC_SUCCESS) return rc;
   /* TODO: Possibly extra checks on return value ? */
   return rc;

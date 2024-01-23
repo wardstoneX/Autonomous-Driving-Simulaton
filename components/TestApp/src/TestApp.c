@@ -10,6 +10,7 @@ int run(void) {
   char buf[128];
   int rd = entropy.read(80);
   memcpy(buf, OS_Dataport_getBuf(entropy.dataport), rd);
-  Debug_LOG_DEBUG("Got %d bytes: %x %x %x...", rd, buf[0], buf[1], buf[2]);
+  Debug_LOG_DEBUG("Got %d bytes:", rd);
+  Debug_DUMP_DEBUG(buf, rd);
   return 0;
 }
