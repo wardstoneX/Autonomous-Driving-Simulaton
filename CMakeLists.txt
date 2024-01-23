@@ -15,6 +15,7 @@ DeclareCAmkESComponent(
   SOURCES
       components/TPM/src/TPM.c
       components/TPM/src/TPM_if.c
+      components/TPM/src/TPM_packet.c
       components/TPM/src/bcm2837/bcm2837_gpio.c
       components/TPM/src/bcm2837/bcm2837_spi.c
   INCLUDES

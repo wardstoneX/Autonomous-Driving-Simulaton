@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <string.h>
 #include "camkes.h"
 #include "lib_debug/Debug.h"
@@ -5,6 +6,10 @@
 #include "bcm2837/bcm2837_gpio.h"
 #include "bcm2837/bcm2837_spi.h"
 #include "TPM_defs.h"
+#include "TPM_packet.h"
+
+#define CMD_BUF_SIZE MAX_SPI_FRAMESIZE
+char cmdBuf[CMD_BUF_SIZE];
 
 /* To some extent, adapted from TPM2_TIS_READ in wolfTPM's tpm2_tis.c.
  * I have added explanations as to what all these bit operations mean
@@ -13,7 +18,7 @@
 void TPM_Read(uint32_t addr, char *buf, unsigned len) {
   char txBuf[MAX_SPI_FRAMESIZE+TPM_HEADER_SIZE] = {0};
   char rxBuf[MAX_SPI_FRAMESIZE+TPM_HEADER_SIZE] = {0};
-  Debug_LOG_DEBUG("TPM Read of size %d at addr %p", len, (void*) addr);
+//  Debug_LOG_DEBUG("TPM Read of size %d at addr %p", len, (void*) addr);
 
   /* First byte:
    *  Bit 7: read => 1, write => 0
@@ -102,4 +107,122 @@ int TPM_Init(void) {
     Debug_LOG_ERROR("Invalid response from TPM!");
     return 1;
   }
+}
+
+void TPM_WaitForStatus(char statusMask, char value) {
+  /* TODO: Do we need to implement timeout? */
+  char status = 0;
+  while (1) {
+    TPM_Read(TPM_STS(0), &status, sizeof(status));
+    if ((status & statusMask) == value) break;
+    seL4_Yield();
+  }
+}
+
+/* Comparable to TPM2_TIS_SendCommand() in wolfTPM. I think it's more clear
+ * to call the thing being sent a packet rather than a command.
+ * See also: TPM TIS spec, page 47
+ */
+TPM_RC TPM_SendPacket(TPM2_Packet* packet) {
+  char status = 0;
+
+  /* Make sure TPM is expecting a command */
+  TPM_Read(TPM_STS(0), &status, sizeof(status));
+  if (!(status & TPM_STS_COMMAND_READY)) {
+    /* Tell TPM to expect a command */
+    Debug_LOG_DEBUG("Telling TPM to expect command.");
+    status = TPM_STS_COMMAND_READY;
+    TPM_Write(TPM_STS(0), &status, sizeof(status));
+    /* Wait for TPM to become ready */
+    TPM_WaitForStatus(TPM_STS_COMMAND_READY, TPM_STS_COMMAND_READY);
+  }
+
+  /* Write the packet */
+  Debug_LOG_DEBUG("Writing packet data to TPM.");
+  int pos = 0, xferSz;
+  char burstCount = 0;
+  while (pos < packet->pos) {
+    /* BURST_COUNT indicates how many bytes can be read from or written to
+     * the TPM without inserting wait states
+     */
+    TPM_Read(TPM_BURST_COUNT(0), &burstCount, sizeof(burstCount));
+    /* TODO: On a big endian architecture, we'd have to reverse the bytes.
+     *       Do we need to support anything except the Raspberry Pi?
+     */
+    if (burstCount == 0) {
+      /* Burst count of 0 means TPM not yet ready to accept data */
+      seL4_Yield();
+      continue;
+    }
+
+    xferSz = packet->pos - pos;
+    if (xferSz > burstCount) xferSz = burstCount;
+    TPM_Write(TPM_DATA_FIFO(0), packet->buf + pos, xferSz);
+
+    pos += xferSz;
+    if (pos < packet->pos)
+      TPM_WaitForStatus(TPM_STS_DATA_EXPECT, TPM_STS_DATA_EXPECT);
+  }
+
+  /* Wait for TPM_STS_DATA_EXPECT = 0 and TPM_STS_VALID = 1 */
+  Debug_LOG_DEBUG("Wait for TPM_STS_DATA_EXPECT = 0 and TPM_STS_VALID = 1");
+  TPM_WaitForStatus(TPM_STS_DATA_EXPECT | TPM_STS_VALID, TPM_STS_VALID);
+
+  /* Tell TPM to execute command */
+  status = TPM_STS_GO;
+  TPM_Write(TPM_STS(0), &status, sizeof(status));
+
+  /* Read response */
+  Debug_LOG_DEBUG("Reading response from the TPM");
+  pos = 0;
+  int rspSz = TPM_HEADER_SIZE; /* Real size of data will be extracted
+				  from TPM header */
+  while (pos < rspSz) {
+    TPM_WaitForStatus(TPM_STS_DATA_AVAIL, TPM_STS_DATA_AVAIL);
+    TPM_Read(TPM_BURST_COUNT(0), &burstCount, sizeof(burstCount));
+    assert(burstCount != 0);
+
+    xferSz = rspSz - pos;
+    if (xferSz > burstCount) xferSz = burstCount;
+    TPM_Read(TPM_DATA_FIFO(0), packet->buf + pos, xferSz);
+    Debug_LOG_DEBUG("Got %d bytes:", xferSz);
+    Debug_DUMP_DEBUG(packet->buf + pos, xferSz);
+    pos += xferSz;
+
+    if (pos == TPM_HEADER_SIZE) {
+      /* Extract real size from header, then keep reading data */
+      uint32_t tmpSz;
+      memcpy(&tmpSz, packet->buf + 2, sizeof(uint32_t));
+      rspSz = TPM2_Packet_SwapU32(tmpSz);
+      Debug_LOG_DEBUG("Real response size: %d", rspSz);
+      if (rspSz < 0 || rspSz > packet->size) {
+        Debug_LOG_ERROR("Response size %d out of bounds!", rspSz);
+	return TPM_RC_FAILURE;
+      }
+    }
+  }
+
+  /* Tell TPM that we're done */
+  status = TPM_STS_COMMAND_READY;
+  TPM_Write(TPM_STS(0), &status, sizeof(status));
+
+  /* Check response code of the TPM's response */
+  uint16_t tmpRc;
+  memcpy(&tmpRc, packet->buf + 6, sizeof(uint16_t));
+  Debug_LOG_DEBUG("Got RC: %x", tmpRc);
+
+  return TPM_RC_SUCCESS;
+}
+
+TPM_RC TPM_SendCommandU16(TPM_CC cmd, uint16_t arg) {
+  TPM_RC rc;
+  TPM2_Packet packet;
+  TPM2_Packet_InitBuf(&packet, cmdBuf, sizeof(cmdBuf));
+  TPM2_Packet_AppendU16(&packet, arg);
+  /* TODO: Do we ever need TPM_ST_SESSIONS? */
+  TPM2_Packet_Finalize(&packet, TPM_ST_NO_SESSIONS, cmd);
+  rc = TPM_SendPacket(&packet);
+  if (rc != TPM_RC_SUCCESS) return rc;
+  /* TODO: Possibly extra checks on return value ? */
+  return rc;
 }

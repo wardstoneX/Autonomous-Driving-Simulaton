@@ -7,6 +7,10 @@
 
 static OS_Dataport_t port = OS_DATAPORT_ASSIGN(entropy_port);
 
+TPM_RC TPM_Startup(void) {
+  return TPM_SendCommandU16(TPM_CC_Startup, TPM_SU_CLEAR);
+}
+
 /* Initialization that must be done before initializing 
  * the specific interfaces
  *
@@ -14,10 +18,11 @@ static OS_Dataport_t port = OS_DATAPORT_ASSIGN(entropy_port);
  */
 void pre_init(void) {
   Debug_LOG_DEBUG("Initializing TPM");
-  if (!TPM_Init())
-    Debug_LOG_INFO("TPM initialized successfully.");
-  else
+  if (TPM_Init() || (TPM_Startup() != TPM_RC_SUCCESS)) {
     Debug_LOG_ERROR("TPM initialization failed!");
+  } else {
+    Debug_LOG_INFO("TPM initialized successfully.");
+  }
 }
 
 size_t entropy_rpc_read(const size_t len) {
