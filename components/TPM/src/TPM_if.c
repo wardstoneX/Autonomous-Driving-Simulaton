@@ -29,7 +29,7 @@ void TPM_Read(uint32_t addr, char *buf, unsigned len) {
   /* Now perform the actual SPI transfer */
   /* TODO: Do we need to check wait states? I remember some comment claiming
    * that the Infineon devices guarantee no wait state, but not sure... */
-  bcm2837_spi_transfernb(txBuf, rxBuf, len);
+  bcm2837_spi_transfernb(txBuf, rxBuf, len + TPM_HEADER_SIZE);
   /* According to RPi_SPI_Flash.c:
    *   We can't use the rx_buffer directly, because bcm2837_spi_transfernb()
    *   already populates it when sending the tx bytes. The actual data received
@@ -63,13 +63,15 @@ int TPM_Init(void) {
   if (!bcm2837_spi_begin(regBase)) return 1;
   bcm2837_spi_setBitOrder(BCM2837_SPI_BIT_ORDER_MSBFIRST);
   bcm2837_spi_setDataMode(BCM2837_SPI_MODE0);
-  /* Infineon Optiga SLB 9670 TPM has a maximum frequency of 38-45MHz,
-   * depending on "t_SLEW" (see datasheet). Here, we use 25MHz because that's
-   * the closest value the SPI library supports.
+  /* Infineon Optiga SLB 9670 TPM has a maximum frequency of 38-45 MHz,
+   * depending on "t_SLEW" (see datasheet). Here, we use 31.25 MHz because
+   * that's the closest value the SPI library supports.
+   * Note that the Raspberry Pi is running at 250 MHz, not 400 MHz, because of
+   * settings in config.txt!
    */
-  bcm2837_spi_setClockDivider(BCM2837_SPI_CLOCK_DIVIDER_16);
+  bcm2837_spi_setClockDivider(BCM2837_SPI_CLOCK_DIVIDER_8);
+  bcm2837_spi_setChipSelectPolarity(BCM2837_SPI_CS1, 0);
   bcm2837_spi_chipSelect(BCM2837_SPI_CS1);
-  bcm2837_spi_setChipSelectPolarity(BCM2837_SPI_CS1, 1); // TODO: confirm
 
   /* Pin 18 (GPIO 24) needs to be high */
   bcm2837_gpio_fsel(RPI_GPIO_P1_18, 1); /* set as output pin */
@@ -77,16 +79,22 @@ int TPM_Init(void) {
 
   /* Wait for chip to become available */
   char access = 0;
+  int timeout = 16;
   do {
     TPM_Read(TPM_ACCESS(0), &access, sizeof(access));
     Debug_LOG_DEBUG("Got: %hhx", access);
-  } while (!((access & TPM_ACCESS_VALID) && (access != 0xFF)));
+  } while (--timeout && !((access & TPM_ACCESS_VALID) && (access != 0xFF)));
 
   /* Request locality*/
   access = TPM_ACCESS_REQUEST_USE;
   TPM_Write(TPM_ACCESS(0), &access, sizeof(access));
+  /* improvised wait loop */
+  timeout = 4096;
+  while (--timeout);
   /* Check for valid response */
+  Debug_LOG_DEBUG("Checking for valid response to locality request.\n");
   TPM_Read(TPM_ACCESS(0), &access, sizeof(access));
+  Debug_LOG_DEBUG("Got: %x\n", access);
   if ((access & (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID))
              == (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID) ) {
     return 0;
