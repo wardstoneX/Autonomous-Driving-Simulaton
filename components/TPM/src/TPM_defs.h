@@ -10,7 +10,8 @@
 #define TPM_READ	0x80
 #define TPM_WRITE	0x00
 
-#define TPM_HEADER_SIZE	4
+#define TPM_HEADER_SIZE		4	/* Header size for SPI */
+#define TPM_COMM_HEADER_SIZE	10	/* Header size for TPM commands */
 
 /* TODO: Why? This is how wolfTPM defines it, but I don't know whether that's
  * platform-specific or defined by some SPI standard.
