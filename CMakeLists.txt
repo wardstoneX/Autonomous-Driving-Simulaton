@@ -3,6 +3,8 @@
 
 cmake_minimum_required(VERSION 3.7.2)
 
+include(components/WolfTPM/CMakeLists.txt)
+
 os_set_config_file(
   "system_config.h"
   CONFIG_PROJECT_NAME "system_config"
@@ -10,23 +12,25 @@ os_set_config_file(
 
 project(demo_tpm C)
 
-DeclareCAmkESComponent(
-  TPM
-  SOURCES
-      components/TPM/src/TPM.c
-      components/TPM/src/TPM_if.c
-      components/TPM/src/TPM_packet.c
-      components/TPM/src/bcm2837/bcm2837_gpio.c
-      components/TPM/src/bcm2837/bcm2837_spi.c
-  INCLUDES
-      components/TPM/src/bcm2837
-  C_FLAGS
-      -Wall
-      -Werror
-  LIBS
-      lib_debug
-      os_core_api
-)
+WolfTPM_DeclareCAmkESComponent(WolfTPM)
+
+#DeclareCAmkESComponent(
+#  TPM
+#  SOURCES
+#      components/TPM/src/TPM.c
+#      components/TPM/src/TPM_if.c
+#      components/TPM/src/TPM_packet.c
+#      components/TPM/src/bcm2837/bcm2837_gpio.c
+#      components/TPM/src/bcm2837/bcm2837_spi.c
+#  INCLUDES
+#      components/TPM/src/bcm2837
+#  C_FLAGS
+#      -Wall
+#      -Werror
+#  LIBS
+#      lib_debug
+#      os_core_api
+#)
 
 DeclareCAmkESComponent(
   TestApp

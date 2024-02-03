@@ -7,24 +7,23 @@ import <std_connector.camkes>;
 #include "EntropySource/camkes/EntropySource.camkes"
 
 #include "system_config.h"
-#include "components/TPM/TPM.camkes"
+#include "components/WolfTPM/WolfTPM.camkes"
 #include "components/TestApp/TestApp.camkes"
 
 assembly {
   composition {
-    component	TPM 	tpm;
-    component	TPM_HW 	tpm_hw;
-    component	TestApp	testApp;
+    component	TestApp		testApp;
+    component	WolfTPM		wolfTPM;
+    component	WolfTPM_HW	wolfTPM_HW;
 
+    WolfTPM_HW_CONNECT(wolfTPM, wolfTPM_HW)
     EntropySource_INSTANCE_CONNECT_CLIENT(
-	tpm,
+	wolfTPM,
 	testApp.entropy_rpc, testApp.entropy_dp
     )
-
-    TPM_HW_CONNECT(tpm, tpm_hw)
   }
 
   configuration {
-    TPM_HW_CONFIGURE_SELF(tpm_hw)
+    WolfTPM_HW_CONFIGURE_SELF(wolfTPM_HW)
   }
 }
