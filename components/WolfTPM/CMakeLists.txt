@@ -18,6 +18,7 @@ function(WolfTPM_DeclareCAmkESComponent name)
     INCLUDES
         ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/hal
         ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/
+	interfaces/headers/
     C_FLAGS
         -Wall
 	-Werror

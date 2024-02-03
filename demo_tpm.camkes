@@ -17,9 +17,10 @@ assembly {
     component	WolfTPM_HW	wolfTPM_HW;
 
     WolfTPM_HW_CONNECT(wolfTPM, wolfTPM_HW)
-    EntropySource_INSTANCE_CONNECT_CLIENT(
+    WolfTPM_INSTANCE_CONNECT_CLIENT(
 	wolfTPM,
-	testApp.entropy_rpc, testApp.entropy_dp
+	testApp.entropy_rpc, testApp.entropy_dp,
+	testApp.keystore_rpc, testApp.keystore_dp
     )
   }
 

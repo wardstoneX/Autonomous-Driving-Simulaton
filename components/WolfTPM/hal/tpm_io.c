@@ -89,6 +89,8 @@ static int TPM2_IoCb_SPI(TPM2_CTX* ctx, const byte* txBuf, byte* rxBuf,
     ret = TPM2_IoCb_Infineon_TriCore_SPI(ctx, txBuf, rxBuf, xferSz, userCtx);
 #elif defined(WOLFTPM_MICROCHIP_HARMONY)
     ret = TPM2_IoCb_Microchip_SPI(ctx, txBuf, rxBuf, xferSz, userCtx);
+#elif defined(WOLFTPM_TRENTOS)
+    ret = TPM2_IoCb_TRENTOS_SPI(ctx, txBuf, rxBuf, xferSz, userCtx);
 #else
 
     /* TODO: Add your platform here for HW SPI interface */

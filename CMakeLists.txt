@@ -14,28 +14,12 @@ project(demo_tpm C)
 
 WolfTPM_DeclareCAmkESComponent(WolfTPM)
 
-#DeclareCAmkESComponent(
-#  TPM
-#  SOURCES
-#      components/TPM/src/TPM.c
-#      components/TPM/src/TPM_if.c
-#      components/TPM/src/TPM_packet.c
-#      components/TPM/src/bcm2837/bcm2837_gpio.c
-#      components/TPM/src/bcm2837/bcm2837_spi.c
-#  INCLUDES
-#      components/TPM/src/bcm2837
-#  C_FLAGS
-#      -Wall
-#      -Werror
-#  LIBS
-#      lib_debug
-#      os_core_api
-#)
-
 DeclareCAmkESComponent(
   TestApp
   SOURCES
       components/TestApp/src/TestApp.c
+  INCLUDES
+      interfaces/headers
   C_FLAGS
       -Wall
       -Werror
@@ -43,6 +27,10 @@ DeclareCAmkESComponent(
       lib_debug
       os_core_api
 )
+
+# Include the custom interfaces
+CAmkESAddCPPInclude(interfaces/camkes)
+CAmkESAddImportPath(interfaces/camkes)
 
 DeclareAndCreateCamkESSystem(demo_tpm.camkes)
 GenerateSimulateScript()
