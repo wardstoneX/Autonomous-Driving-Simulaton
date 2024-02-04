@@ -19,14 +19,17 @@ int run(void) {
   Debug_LOG_DEBUG("Got %d bytes:", rd);
   Debug_DUMP_DEBUG(buf, rd);
 
+  uint32_t exp;
   Debug_LOG_DEBUG("Reading EK.");
-  keystore.getEK_RSA2048();
+  keystore.getEK_RSA2048(&exp);
   memcpy(ek, OS_Dataport_getBuf(keystore.dataport), EK_SIZE);
+  Debug_LOG_DEBUG("Got EK (exponent %d)", exp);
   Debug_DUMP_DEBUG(ek, EK_SIZE);
 
   Debug_LOG_DEBUG("Reading cSRK.");
-  keystore.getCSRK_RSA1024();
+  keystore.getCSRK_RSA1024(&exp);
   memcpy(csrk, OS_Dataport_getBuf(keystore.dataport), CSRK_SIZE);
+  Debug_LOG_DEBUG("Got cSRK (exponent %d)", exp);
   Debug_DUMP_DEBUG(csrk, CSRK_SIZE);
   return 0;
 }

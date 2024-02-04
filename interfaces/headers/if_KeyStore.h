@@ -7,8 +7,8 @@
 #define CSRK_SIZE	128
 
 typedef struct {
-  void (*getEK_RSA2048)(void);
-  void (*getCSRK_RSA1024)(void);
+  void (*getEK_RSA2048)(uint32_t *exp);
+  void (*getCSRK_RSA1024)(uint32_t *exp);
   OS_Dataport_t dataport;
 } if_KeyStore_t;
 

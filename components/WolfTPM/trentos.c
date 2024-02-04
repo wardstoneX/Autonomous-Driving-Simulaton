@@ -133,21 +133,17 @@ size_t entropy_rpc_read(const size_t len) {
 
 /* if_Keystore */
 
-/* Places the EK into the dataport.
- * TODO: Do we also need to know exponent?
- */
-void keystore_rpc_getEK_RSA2048(void) {
+/* Places the EK into the dataport. */
+void keystore_rpc_getEK_RSA2048(uint32_t *exp) {
+  *exp = ek.pub.publicArea.parameters.rsaDetail.exponent;
   memcpy(
       OS_Dataport_getBuf(keystorePort),
       ek.pub.publicArea.unique.rsa.buffer, EK_SIZE);
 }
 
-/* Places the cSRK into the dataport.
- * TODO: Do we also need to know exponent?
- */
-void keystore_rpc_getCSRK_RSA1024(void) {
-  /* TODO: At the moment, this is broken, because real SRK, and thus any
-   * other keys (which require is as a parent), fails to generate */
+/* Places the cSRK into the dataport. */
+void keystore_rpc_getCSRK_RSA1024(uint32_t *exp) {
+  *exp = csrk.pub.publicArea.parameters.rsaDetail.exponent;
   memcpy(
       OS_Dataport_getBuf(keystorePort),
       csrk.pub.publicArea.unique.rsa.buffer, CSRK_SIZE);
