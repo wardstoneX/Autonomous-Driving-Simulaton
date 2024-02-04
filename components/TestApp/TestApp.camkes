@@ -11,4 +11,8 @@ component TestApp {
   /* For loading and storing keys in the TPM */
   uses		if_KeyStore	keystore_rpc;
   dataport	Buf		keystore_dp;
+
+  /* For in-TPM decryption */
+  uses		if_Crypto	crypto_rpc;
+  dataport	Buf		crypto_dp;
 };

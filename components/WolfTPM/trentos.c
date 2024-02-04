@@ -5,6 +5,7 @@
 #include "OS_Dataport.h"
 
 #include "if_KeyStore.h" /* for constants such as CEK_SIZE and CSRK_SIZE */
+#include "if_Crypto.h"   /* for enum if_Crypto_Key */
 
 #include "bcm2837/bcm2837_gpio.h"
 #include "bcm2837/bcm2837_spi.h"
@@ -26,6 +27,7 @@
 
 static OS_Dataport_t entropyPort = OS_DATAPORT_ASSIGN(entropy_port);
 static OS_Dataport_t keystorePort = OS_DATAPORT_ASSIGN(keystore_port);
+static OS_Dataport_t cryptoPort = OS_DATAPORT_ASSIGN(crypto_port);
 
 /* Context required for wolfTPM */
 WOLFTPM2_DEV dev  = {0};
@@ -140,6 +142,18 @@ void create_rsa_key(WOLFTPM2_KEY *key, uint32_t bits) {
       "Failed to create key!");
 }
 
+WOLFTPM2_KEY *getKey(enum if_Crypto_Key key) {
+  switch (key) {
+    case IF_CRYPTO_KEY_CEK:
+      return &cek;
+    case IF_CRYPTO_KEY_CSRK:
+      return &csrk;
+    default:
+      Debug_LOG_ERROR("Unknown key %d!", key);
+      return NULL;
+  }
+}
+
 /* if_OS_Entropy */
 
 size_t entropy_rpc_read(const size_t len) {
@@ -229,8 +243,52 @@ int keystore_rpc_loadKey(uint32_t hdl, uint32_t *len, uint32_t *exp) {
 
 /* if_Crypto */
 
-
-/*
- * wolfTPM2_CreatePrimaryKey    to create parent of the key
- * wolfTPM2_GetKeyTemplate_RSA    to create template of the key
+/* Decrypt a message that was encrypted with RSA/OAEP.
+ *
+ * key is actually of type enum if_Crypto_Key.
+ * TODO: How to specify an enum in an CAmkES interface file?
+ *
+ * *len should be the length of the ciphertext. After the function returns,
+ * it will be set to the length of the decrypted text.
+ *
+ * Input of ciphertext and output of decrypted text happen over the dataport.
  */
+int crypto_rpc_decrypt_RSA_OAEP(int key, int *len) {
+  WOLFTPM2_KEY *pKey = getKey(key);
+
+  /* Note: Looking at wolfTPM2_RsaDecrypt source code, it appears that they
+   * copy the ciphertext into an internal buffer, perform operations on that,
+   * and finally copy the result to the output buffer.
+   * So it shouldn't be a problem that input and output pointer are the same.
+   */
+  CHKRCI(
+      wolfTPM2_RsaDecrypt(&dev, pKey, TPM_ALG_OAEP,
+	                  OS_Dataport_getBuf(cryptoPort), *len,
+			  OS_Dataport_getBuf(cryptoPort), len),
+      1);
+  return 0;
+}
+
+/* Encrypt a message with RSA/OAEP.
+ *
+ * key is actually of type enum if_Crypto_Key.
+ * TODO: How to specify an enum in an CAmkES interface file?
+ *
+ * *len should be the length of the message. After the function returns,
+ * it will be set to the length of the encrypted text.
+ *
+ * Input of message and output of ciphertext happen over the dataport.
+ */
+int crypto_rpc_encrypt_RSA_OAEP(int key, int *len) {
+  WOLFTPM2_KEY *pKey = getKey(key);
+
+  /* Note: Similar to decrypt_RSA_OAEP(), I assumte that it's fine that input
+   * and output buffer are the same.
+   */
+  CHKRCI(
+      wolfTPM2_RsaEncrypt(&dev, pKey, TPM_ALG_OAEP,
+	                  OS_Dataport_getBuf(cryptoPort), *len,
+			  OS_Dataport_getBuf(cryptoPort), len),
+      1);
+  return 0;
+}

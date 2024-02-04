@@ -1,5 +1,6 @@
 #include <if_OS_Entropy.camkes>
 #include "if_KeyStore.camkes"
+#include "if_Crypto.camkes"
 
 /* Copied from RPi_SPI_Flash */
 #define WOLFTPM_BCM2837_DATAPORT_PADDR	0x3F200000
@@ -11,6 +12,9 @@ component WolfTPM {
 
   provides	if_KeyStore	keystore_rpc;
   dataport	Buf		keystore_port;
+
+  provides	if_Crypto	crypto_rpc;
+  dataport	Buf		crypto_port;
 
   /* For talking to the hardware */
   dataport	Buf(WOLFTPM_BCM2837_DATAPORT_SIZE)	regBase;
@@ -34,7 +38,8 @@ component WolfTPM_HW {
 #define WolfTPM_INSTANCE_CONNECT_CLIENT(\
   _inst_,\
   _Erpc_, _Eport_,\
-  _Krpc_, _Kport_) \
+  _Krpc_, _Kport_, \
+  _Crpc_, _Cport_) \
   \
   EntropySource_INSTANCE_CONNECT_CLIENT(_inst_, _Erpc_, _Eport_)\
   connection seL4RPCCall _inst_ ## _keystore_rpc(\
@@ -44,4 +49,12 @@ component WolfTPM_HW {
   connection seL4SharedData _inst_ ## _keystore_port(\
       from	_Kport_,\
       to	_inst_.keystore_port\
+  ); \
+  connection seL4RPCCall _inst_ ## _crypto_rpc(\
+      from	_Crpc_,\
+      to	_inst_.crypto_rpc\
+  ); \
+  connection seL4SharedData _inst_ ## _crypto_port(\
+      from	_Cport_,\
+      to	_inst_.crypto_port\
   );
