@@ -16,20 +16,25 @@
   Debug_LOG_ERROR(b); \
   exit(1); \
 }
-#define CHKRCI(a) if ((a) != TPM_RC_SUCCESS) {\
+#define CHKRCI(a,b) if ((a) != TPM_RC_SUCCESS) {\
   Debug_LOG_ERROR(#a " failed!"); \
-  return 1; \
+  return b; \
 }
+
+#define NV_INDEX TPM_20_OWNER_NV_SPACE
+#define NV_MAX_SIZE 1024
 
 static OS_Dataport_t entropyPort = OS_DATAPORT_ASSIGN(entropy_port);
 static OS_Dataport_t keystorePort = OS_DATAPORT_ASSIGN(keystore_port);
 
 /* Context required for wolfTPM */
-WOLFTPM2_DEV dev = {0};
-TPM2HalIoCb ioCb = TPM2_IoCb_TRENTOS_SPI;
-WOLFTPM2_KEY srk = {0};
-WOLFTPM2_KEY cek = {0};
+WOLFTPM2_DEV dev  = {0};
+TPM2HalIoCb ioCb  = TPM2_IoCb_TRENTOS_SPI;
+WOLFTPM2_KEY srk  = {0};
+WOLFTPM2_KEY cek  = {0};
 WOLFTPM2_KEY csrk = {0};
+WOLFTPM2_NV nv	  = {0};
+uint32_t nv_off   =  0;
 
 /* Declarations of local helper functions */
 void create_rsa_key(WOLFTPM2_KEY *key, uint32_t bits);
@@ -71,6 +76,7 @@ void pre_init(void) {
   CHKRCV(wolfTPM2_Clear(&dev), "Failed to clear TPM!");
   Debug_LOG_INFO("TPM cleared successfully");
 
+  /* Device info might be useful as sanity check, but currently not needed */
 #if 0
   Debug_LOG_INFO("Getting device info");
   WOLFTPM2_CAPS caps;
@@ -90,14 +96,6 @@ void pre_init(void) {
    * just a regular RSA key with a fancy name.
    */
   Debug_LOG_INFO("Creating Storage Root Key");
-  /*
-  TPMT_PUBLIC srkTmpt = {0};
-  CHKRCV(wolfTPM2_GetKeyTemplate_RSA_SRK(&srkTmpt),
-      "Failed to create key template!");
-  CHKRCV(
-      wolfTPM2_CreatePrimaryKey(&dev, &srk, TPM_RH_OWNER, &srkTmpt, NULL, 0),
-      "Failed to create SRK!");
-      */
   CHKRCV(
       wolfTPM2_CreateSRK(&dev, &srk, TPM_ALG_RSA, NULL, 0),
       "Failed to create SRK!");
@@ -116,6 +114,16 @@ void pre_init(void) {
   Debug_LOG_INFO("Created cEK (%d bits)",
                  cek.pub.publicArea.unique.rsa.size * 8);
   assert(cek.pub.publicArea.unique.rsa.size == CEK_SIZE);
+
+  /* Finally, create a new NV index for storing keys */
+  Debug_LOG_INFO("Creating new NV index");
+  word32 nvAttr = 0;
+  WOLFTPM2_HANDLE nvParent = { .hndl = TPM_RH_OWNER };
+  wolfTPM2_GetNvAttributesTemplate(TPM_RH_OWNER, &nvAttr);
+  CHKRCV(
+      wolfTPM2_NVCreateAuth(&dev, &nvParent, &nv, NV_INDEX,
+	nvAttr, NV_MAX_SIZE, NULL, 0),
+      "Failed to create NV index!");
 }
 
 /* Helper functions */
@@ -159,12 +167,65 @@ void keystore_rpc_getCSRK_RSA1024(uint32_t *exp) {
       csrk.pub.publicArea.unique.rsa.buffer, CSRK_SIZE);
 }
 
-/*
-int keystore_rpc_storeKey(int keyLen) {
+/* Stores key in NV memory.
+ * Returns a handle in case of success, or -1 in case of failure.
+ * len is length of the key data in bytes. The exponent is not considered part
+ * of key data, it is a separate parameter.
+ */
+uint32_t keystore_rpc_storeKey(uint32_t len, uint32_t exp) {
+  if (nv_off + len >= NV_MAX_SIZE) {
+    Debug_LOG_ERROR(
+	"No more space in NV! %d (nv_off) + %d (len) > %d (NV_MAX_SIZE)",
+	nv_off, len, NV_MAX_SIZE);
+    return -1;
+  }
+  uint32_t start = nv_off;
+  /* Write length of key (4 bytes) */
+  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX, (byte*) &len,
+	                      sizeof(len), nv_off),
+      -1);
+  nv_off += sizeof(len);
+  /* Write exponent (4 bytes) */
+  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX, (byte*) &exp,
+	                      sizeof(exp), nv_off),
+      -1);
+  nv_off += sizeof(exp);
+  /* Write key data (len bytes) */
+  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
+	                      OS_Dataport_getBuf(keystorePort), len, nv_off),
+      -1);
+  nv_off += len;
+  return start;
 }
-*/
 
-// loadKey()
+/* Reads key from NV memory. Takes a handle (which actually is an offset...)
+ * supplied by storeKey() as argument.
+ * Size and exponent of the key are written out to *len and *exp.
+ */
+int keystore_rpc_loadKey(uint32_t hdl, uint32_t *len, uint32_t *exp) {
+  /* TODO: Do we need size checks or does NVReadAuth fail automatically
+   *       when we are out of bounds? */
+
+  /* Read length of key */
+  uint32_t keySize;
+  uint32_t sz = sizeof(*len);
+  CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
+	                    (byte*) &keySize, &sz, hdl), 1);
+  assert(sz == sizeof(*len));
+  *len = keySize;
+  /* Read exponent of key */
+  sz = sizeof(*exp);
+  CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
+	                    (byte*) exp, &sz, hdl + sizeof(*len)), 1);
+  assert(sz == sizeof(*exp));
+  /* Read key data */
+  sz = keySize;
+  CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
+	                     OS_Dataport_getBuf(keystorePort), &sz,
+			     hdl + sizeof(*len) + sizeof(*exp)), 1);
+  assert(sz == keySize);
+  return 0;
+}
 
 /* if_Crypto */
 

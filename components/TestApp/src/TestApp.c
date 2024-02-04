@@ -31,5 +31,25 @@ int run(void) {
   memcpy(csrk, OS_Dataport_getBuf(keystore.dataport), CSRK_SIZE);
   Debug_LOG_DEBUG("Got cSRK (exponent %d)", exp);
   Debug_DUMP_DEBUG(csrk, CSRK_SIZE);
+
+  Debug_LOG_DEBUG("Storing some data in NV.");
+  memset(OS_Dataport_getBuf(keystore.dataport), 0xAA, 128);
+  uint32_t hdl = keystore.storeKey(128, 1234);
+  if (hdl == -1) {
+    Debug_LOG_ERROR("Failed to store the data!");
+    return 1;
+  }
+  Debug_LOG_DEBUG("Got handle %d", hdl);
+
+  Debug_LOG_DEBUG("Reading back the data.");
+  /* Zero everything to make sure that we are actually reading fresh data. */
+  memset(OS_Dataport_getBuf(keystore.dataport), 0x00, 128);
+  uint32_t kLen = 0, kExp = 0;
+  if (keystore.loadKey(hdl, &kLen, &kExp)) {
+    Debug_LOG_ERROR("Failed to read key!");
+    return 1;
+  }
+  Debug_LOG_DEBUG("Read back: length %d, exp %d", kLen, kExp);
+  Debug_DUMP_DEBUG(OS_Dataport_getBuf(keystore.dataport), kLen);
   return 0;
 }
