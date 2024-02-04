@@ -163,6 +163,11 @@ waitForConnectionEstablished(
     return ret;
 }
 */
+
+
+
+
+
 //------------------------------------------------------------------------------
 int run()
 {
@@ -175,6 +180,113 @@ int run()
         Debug_LOG_ERROR("waitForNetworkStackInit() failed with: %d", ret);
         return -1;
     }
+
+
+
+    Debug_LOG_INFO("sending an unencrypted message to python dummyserver");
+
+    OS_Socket_Handle_t hSocket;
+    ret = OS_Socket_create(
+              &networkStackCtx,
+              &hSocket,
+              OS_AF_INET,
+              OS_SOCK_STREAM);
+    if (ret != OS_SUCCESS)
+    {
+        Debug_LOG_ERROR("OS_Socket_create() failed, code %d", ret);
+        return -1;
+    }
+
+    const OS_Socket_Addr_t dstAddr =
+    {
+        .addr = PYTHON_ADDR,
+        .port = COMM_PORT
+    };
+
+    ret = OS_Socket_connect(hSocket, &dstAddr);
+    if (ret != OS_SUCCESS)
+    {
+        Debug_LOG_ERROR("OS_Socket_connect() failed, code %d", ret);
+        OS_Socket_close(hSocket);
+        return ret;
+    }
+    Debug_LOG_INFO("Returned from OS_Socket_connect() in SecureCommunication");
+    //everything runs fine until here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+
+    /*
+    ret = waitForConnectionEstablished(hSocket.handleID);
+    if (ret != OS_SUCCESS)
+    {
+        Debug_LOG_ERROR("waitForConnectionEstablished() failed, error %d", ret);
+        OS_Socket_close(hSocket);
+        return -1;
+    }
+    */
+
+    Debug_LOG_INFO("Send message to host...");
+
+    char* request = "hello python!";
+
+    size_t len_request = strlen(request);
+    size_t n;
+
+    do
+    {
+        seL4_Yield();
+        ret = OS_Socket_write(hSocket, request, len_request, &n);
+    }
+    while (ret == OS_ERROR_TRY_AGAIN);
+
+    if (OS_SUCCESS != ret)
+    {
+        Debug_LOG_ERROR("OS_Socket_write() failed with error code %d", ret);
+    }
+
+    Debug_LOG_INFO("Message successfully sent");
+
+/////////////////////TESTING RECVFROM//////////////////////////////////////////////////////////////////////////////////
+    Debug_LOG_INFO("Trying to receive reply");
+    char buffer[OS_DATAPORT_DEFAULT_SIZE];
+    char* position = buffer;
+    size_t requestedLen = 11;
+    size_t read = 0;
+    OS_Socket_Addr_t srcAddr;
+
+    do {
+        ret = OS_Socket_recvfrom(hSocket, buffer, requestedLen, &read, &srcAddr);
+        Debug_LOG_INFO("OS_Socket_recvfrom() - bytes read: %d, err: %d", read, ret);
+
+        switch(ret) {
+            case OS_SUCCESS:
+                position += read;
+                break;
+            case OS_ERROR_TRY_AGAIN:
+                Debug_LOG_WARNING("OS_Socket_recvfrom() reported try again");
+                continue;
+            case OS_ERROR_CONNECTION_CLOSED:
+                Debug_LOG_WARNING("connection closed");
+                read = 0;
+                break;
+            case OS_ERROR_NETWORK_CONN_SHUTDOWN:
+                Debug_LOG_WARNING("connection shut down");
+                read = 0;
+                break;
+            default:
+                Debug_LOG_ERROR("Message retrieval failed while reading, "
+                            "OS_Socket_recvfrom() returned error code %d, bytes read %zu",
+                            ret, (size_t) (position - buffer));
+                read = 0;
+        }
+    } while(read >0 || ret == OS_ERROR_TRY_AGAIN);
+
+    // Ensure buffer is null-terminated before printing it
+    buffer[sizeof(buffer) - 1] = '\0';
+    printf("Received string: %s", buffer);
+
+    OS_Socket_close(hSocket);
+    Debug_LOG_INFO("Socket successfully closed");
+
+
     /*
 
     OS_Socket_Handle_t hSocket;

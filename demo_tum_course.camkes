@@ -7,10 +7,10 @@
 import <std_connector.camkes>;
 
 #include "system_config.h"
-#include "components/SecureCommunication/SecureCommunication.camkes"
 
 #include "TimeServer/camkes/TimeServer.camkes"
 TimeServer_COMPONENT_DEFINE(TimeServer)
+
 
 // Network
 #include "plat_nic.camkes"
@@ -28,12 +28,12 @@ EntropySource_COMPONENT_DEFINE(EntropySource)
 
 #include "components/TestApp/TestApp.camkes"
 
-//TODO: figure out why the project doesn't build when this line is not commented
-//#include "components/SecureCommunication/SecureCommunication.camkes"
+#include "components/SecureCommunication/SecureCommunication.camkes"
 
 
 assembly {
     composition {
+
 
         // TimeServer
         component TimeServer timeServer;
@@ -63,20 +63,20 @@ assembly {
 
         EntropySource_INSTANCE_CONNECT_CLIENT(
             entropySource,
-            secureComm.entropy_rpc,
-            secureComm.entropy_dp)
+            secureCommunication.entropy_rpc,
+            secureCommunication.entropy_dp)
 
 
         //Secure Communication
-        component   SecureCommunication     secureComm;
+        component   SecureCommunication     secureCommunication;
 
         NetworkStack_PicoTcp_INSTANCE_CONNECT_CLIENTS(
             nwStack,
-            secureComm, networkStack
+            secureCommunication, networkStack
         )
 
         IF_OS_SOCKET_CONNECT(
-            secureComm, secureCommunication,
+            secureCommunication, secureCommunication,
             testApp, secureCommunication,
             1
         )
@@ -89,8 +89,8 @@ assembly {
 
     configuration {
 
+
         TimeServer_CLIENT_ASSIGN_BADGES(
-            flash.timeServer_rpc,
             EXERCISE_DEMO_NIC_TIMESERVER_CLIENTS(nwDriver)
             nwStack.timeServer_rpc
         )
@@ -98,7 +98,7 @@ assembly {
         EXERCISE_DEMO_NIC_CONFIG(nwDriver)
 
         NetworkStack_PicoTcp_CLIENT_ASSIGN_BADGES(
-            secureComm, networkStack
+            secureCommunication, networkStack
         )
 
         NetworkStack_PicoTcp_INSTANCE_CONFIGURE_CLIENTS(

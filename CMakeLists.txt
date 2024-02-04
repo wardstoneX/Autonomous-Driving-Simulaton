@@ -21,16 +21,6 @@ TimeServer_DeclareCAmkESComponent(
     TimeServer
 )
 
-RPi_SPI_Flash_DeclareCAmkESComponent(
-    RPi_SPI_Flash
-    LIBS
-        TimeServer_client
-)
-
-StorageServer_DeclareCAmkESComponent(
-    StorageServer
-)
-
 NetworkStack_PicoTcp_DeclareCAmkESComponent(
     NetworkStack_PicoTcp
     C_FLAGS
@@ -46,15 +36,22 @@ EntropySource_DeclareCAmkESComponent(
 
 DeclareCAmkESComponent(
     SecureCommunication
+    INCLUDES
+        helpers
     SOURCES
         components/SecureCommunication/src/SecureCommunication.c
+        helpers/sc_helpers.c
     C_FLAGS
         -Wall
         -Werror
     LIBS
+        system_config
+        lib_debug
         os_core_api
         os_socket_client
         os_crypto
+        #os_filesystem
+        #os_keystore_file
 )
 
 DeclareCAmkESComponent(

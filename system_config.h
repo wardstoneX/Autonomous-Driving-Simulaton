@@ -35,8 +35,6 @@
 //-----------------------------------------------------------------------------
 #define FILESYSTEM_1_STORAGE_OFFSET     0
 #define FILESYSTEM_1_STORAGE_SIZE       (1024*32)
-#define FILESYSTEM_2_STORAGE_OFFSET     (1024*32)
-#define FILESYSTEM_2_STORAGE_SIZE       (1024*32)
 
 
 //-----------------------------------------------------------------------------
@@ -57,3 +55,10 @@
 #define NIC_DRIVER_RINGBUFFER_NUMBER_ELEMENTS 16
 #define NIC_DRIVER_RINGBUFFER_SIZE                                             \
     (NIC_DRIVER_RINGBUFFER_NUMBER_ELEMENTS * 4096)
+
+//-----------------------------------------------------------------------------
+// Secure Communication
+//-----------------------------------------------------------------------------
+#define PYTHON_ADDR     "10.0.0.10"
+#define CRYPTO_PORT     65432
+#define COMM_PORT       1234
