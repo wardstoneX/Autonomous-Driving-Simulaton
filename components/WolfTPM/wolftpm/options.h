@@ -33,6 +33,8 @@ extern "C" {
 #endif
 
 #define WOLFTPM_TRENTOS
+#define WOLFTPM_SLB9670
+#define TPM_TIMEOUT_TRIES 10000000
 #define WOLFTPM_EXAMPLE_HAL
 #define DEBUG_WOLFTPM
 //#define WOLFTPM_DEBUG_IO

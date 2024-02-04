@@ -92,13 +92,34 @@ void pre_init(void) {
    * just a regular RSA key with a fancy name.
    */
   Debug_LOG_INFO("Creating Storage Root Key");
+  /*
+  TPMT_PUBLIC srkTmpt = {0};
+  CHKRCV(wolfTPM2_GetKeyTemplate_RSA_SRK(&srkTmpt),
+      "Failed to create key template!");
+  CHKRCV(
+      wolfTPM2_CreatePrimaryKey(&dev, &srk, TPM_RH_OWNER, &srkTmpt, NULL, 0),
+      "Failed to create SRK!");
+      */
   CHKRCV(
       wolfTPM2_CreateSRK(&dev, &srk, TPM_ALG_RSA, NULL, 0),
       "Failed to create SRK!");
   Debug_LOG_INFO("Created Storage Root Key");
 
   /* Now, create the cSRK */
-  /* TODO */
+  Debug_LOG_INFO("Creating cSRK");
+  TPMT_PUBLIC csrkTmpt;
+  wolfTPM2_GetKeyTemplate_RSA(
+      &csrkTmpt,
+      TPMA_OBJECT_sensitiveDataOrigin
+      | TPMA_OBJECT_userWithAuth
+      | TPMA_OBJECT_decrypt);
+  csrkTmpt.parameters.rsaDetail.keyBits = 1024;
+  CHKRCV(
+      wolfTPM2_CreateAndLoadKey(&dev, &csrk, &srk.handle, &csrkTmpt, NULL, 0),
+      "Failed to create cSRK!");
+  Debug_LOG_INFO("Created cSRK (%d bits)",
+                 csrk.pub.publicArea.unique.rsa.size * 8);
+  assert(csrk.pub.publicArea.unique.rsa.size == CSRK_SIZE);
 }
 
 /* if_OS_Entropy */
