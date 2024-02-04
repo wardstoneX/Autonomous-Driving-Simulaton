@@ -4,7 +4,7 @@
 #include "lib_debug/Debug.h"
 #include "OS_Dataport.h"
 
-#include "if_KeyStore.h" /* for constants such as EK_SIZE and SRK_SIZE */
+#include "if_KeyStore.h" /* for constants such as EK_SIZE and CSRK_SIZE */
 
 #include "bcm2837/bcm2837_gpio.h"
 #include "bcm2837/bcm2837_spi.h"
@@ -27,8 +27,9 @@ static OS_Dataport_t keystorePort = OS_DATAPORT_ASSIGN(keystore_port);
 /* Context required for wolfTPM */
 WOLFTPM2_DEV dev = {0};
 TPM2HalIoCb ioCb = TPM2_IoCb_TRENTOS_SPI;
-WOLFTPM2_KEY srk = {0};
 WOLFTPM2_KEY ek = {0};
+WOLFTPM2_KEY srk = {0};
+WOLFTPM2_KEY csrk = {0};
 
 /* Initialization that must be done before initializing 
  * the specific interfaces
@@ -86,7 +87,6 @@ void pre_init(void) {
   assert(ek.pub.publicArea.unique.rsa.size == EK_SIZE);
 
   /* TODO: This gets timeout. Why? */
-#if 0
   /* Create the **real** SRK, which is needed for the storage hiearchy.
    * Not the "cSRK", which, if I understood the assignment correctly, is
    * just a regular RSA key with a fancy name.
@@ -96,7 +96,9 @@ void pre_init(void) {
       wolfTPM2_CreateSRK(&dev, &srk, TPM_ALG_RSA, NULL, 0),
       "Failed to create SRK!");
   Debug_LOG_INFO("Created Storage Root Key");
-#endif
+
+  /* Now, create the cSRK */
+  /* TODO */
 }
 
 /* if_OS_Entropy */
@@ -110,13 +112,31 @@ size_t entropy_rpc_read(const size_t len) {
 
 /* if_Keystore */
 
+/* Places the EK into the dataport.
+ * TODO: Do we also need to know exponent?
+ */
 void keystore_rpc_getEK_RSA2048(void) {
   memcpy(
       OS_Dataport_getBuf(keystorePort),
       ek.pub.publicArea.unique.rsa.buffer, EK_SIZE);
 }
-// getCSRK()
-// storeKey()
+
+/* Places the cSRK into the dataport.
+ * TODO: Do we also need to know exponent?
+ */
+void keystore_rpc_getCSRK_RSA1024(void) {
+  /* TODO: At the moment, this is broken, because real SRK, and thus any
+   * other keys (which require is as a parent), fails to generate */
+  memcpy(
+      OS_Dataport_getBuf(keystorePort),
+      csrk.pub.publicArea.unique.rsa.buffer, CSRK_SIZE);
+}
+
+/*
+int keystore_rpc_storeKey(int keyLen) {
+}
+*/
+
 // loadKey()
 
 /* if_Crypto */
