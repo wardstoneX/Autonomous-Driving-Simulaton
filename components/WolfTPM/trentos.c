@@ -4,7 +4,7 @@
 #include "lib_debug/Debug.h"
 #include "OS_Dataport.h"
 
-#include "if_KeyStore.h" /* for constants such as EK_SIZE and CSRK_SIZE */
+#include "if_KeyStore.h" /* for constants such as CEK_SIZE and CSRK_SIZE */
 
 #include "bcm2837/bcm2837_gpio.h"
 #include "bcm2837/bcm2837_spi.h"
@@ -27,9 +27,12 @@ static OS_Dataport_t keystorePort = OS_DATAPORT_ASSIGN(keystore_port);
 /* Context required for wolfTPM */
 WOLFTPM2_DEV dev = {0};
 TPM2HalIoCb ioCb = TPM2_IoCb_TRENTOS_SPI;
-WOLFTPM2_KEY ek = {0};
 WOLFTPM2_KEY srk = {0};
+WOLFTPM2_KEY cek = {0};
 WOLFTPM2_KEY csrk = {0};
+
+/* Declarations of local helper functions */
+void create_rsa_key(WOLFTPM2_KEY *key, uint32_t bits);
 
 /* Initialization that must be done before initializing 
  * the specific interfaces
@@ -68,6 +71,7 @@ void pre_init(void) {
   CHKRCV(wolfTPM2_Clear(&dev), "Failed to clear TPM!");
   Debug_LOG_INFO("TPM cleared successfully");
 
+#if 0
   Debug_LOG_INFO("Getting device info");
   WOLFTPM2_CAPS caps;
   
@@ -78,15 +82,9 @@ void pre_init(void) {
       "FIPS 140-2 %d, CC-EAL4 %d\n",
       caps.mfgStr, caps.mfg, caps.vendorStr, caps.fwVerMajor,
       caps.fwVerMinor, caps.fwVerVendor, caps.fips140_2, caps.cc_eal4);
+#endif
 
-  Debug_LOG_INFO("Creating EK");
-  CHKRCV(wolfTPM2_CreateEK(&dev, &ek, TPM_ALG_RSA), "Failed to create EK");
-  Debug_LOG_INFO(
-      "Created EK (%d bits)",
-      ek.pub.publicArea.unique.rsa.size * 8);
-  assert(ek.pub.publicArea.unique.rsa.size == EK_SIZE);
-
-  /* TODO: This gets timeout. Why? */
+  /* TODO: After increasing timeout, it works, but why does it take so long? */
   /* Create the **real** SRK, which is needed for the storage hiearchy.
    * Not the "cSRK", which, if I understood the assignment correctly, is
    * just a regular RSA key with a fancy name.
@@ -107,19 +105,31 @@ void pre_init(void) {
 
   /* Now, create the cSRK */
   Debug_LOG_INFO("Creating cSRK");
-  TPMT_PUBLIC csrkTmpt;
-  wolfTPM2_GetKeyTemplate_RSA(
-      &csrkTmpt,
-      TPMA_OBJECT_sensitiveDataOrigin
-      | TPMA_OBJECT_userWithAuth
-      | TPMA_OBJECT_decrypt);
-  csrkTmpt.parameters.rsaDetail.keyBits = 1024;
-  CHKRCV(
-      wolfTPM2_CreateAndLoadKey(&dev, &csrk, &srk.handle, &csrkTmpt, NULL, 0),
-      "Failed to create cSRK!");
+  create_rsa_key(&csrk, CSRK_SIZE * 8);
   Debug_LOG_INFO("Created cSRK (%d bits)",
                  csrk.pub.publicArea.unique.rsa.size * 8);
   assert(csrk.pub.publicArea.unique.rsa.size == CSRK_SIZE);
+
+  /* And the cEK */
+  Debug_LOG_INFO("Creating cEK");
+  create_rsa_key(&cek, CEK_SIZE * 8);
+  Debug_LOG_INFO("Created cEK (%d bits)",
+                 cek.pub.publicArea.unique.rsa.size * 8);
+  assert(cek.pub.publicArea.unique.rsa.size == CEK_SIZE);
+}
+
+/* Helper functions */
+void create_rsa_key(WOLFTPM2_KEY *key, uint32_t bits) {
+  TPMT_PUBLIC tmpt;
+  wolfTPM2_GetKeyTemplate_RSA(
+      &tmpt,
+      TPMA_OBJECT_sensitiveDataOrigin
+      | TPMA_OBJECT_userWithAuth
+      | TPMA_OBJECT_decrypt);
+  tmpt.parameters.rsaDetail.keyBits = bits;
+  CHKRCV(
+      wolfTPM2_CreateAndLoadKey(&dev, key, &srk.handle, &tmpt, NULL, 0),
+      "Failed to create key!");
 }
 
 /* if_OS_Entropy */
@@ -133,12 +143,12 @@ size_t entropy_rpc_read(const size_t len) {
 
 /* if_Keystore */
 
-/* Places the EK into the dataport. */
-void keystore_rpc_getEK_RSA2048(uint32_t *exp) {
-  *exp = ek.pub.publicArea.parameters.rsaDetail.exponent;
+/* Places the cEK into the dataport. */
+void keystore_rpc_getCEK_RSA2048(uint32_t *exp) {
+  *exp = cek.pub.publicArea.parameters.rsaDetail.exponent;
   memcpy(
       OS_Dataport_getBuf(keystorePort),
-      ek.pub.publicArea.unique.rsa.buffer, EK_SIZE);
+      cek.pub.publicArea.unique.rsa.buffer, CEK_SIZE);
 }
 
 /* Places the cSRK into the dataport. */
