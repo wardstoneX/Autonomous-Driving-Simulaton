@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="diagram.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="2.2123078"
+     inkscape:cx="15.142559"
+     inkscape:cy="296.52294"
+     inkscape:window-width="1918"
+     inkscape:window-height="1048"
+     inkscape:window-x="0"
+     inkscape:window-y="30"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="-116.08253 : -0.3221384 : 0"
+       inkscape:vp_y="204.49606 : 978.86749 : 0"
+       inkscape:vp_z="110.14835 : 36.64148 : 0"
+       inkscape:persp3d-origin="105 : 99 : 1"
+       id="perspective2564" />
+  </defs>
+  <g
+     inkscape:label="Слой 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#fefece;fill-opacity:1;stroke:#a80a3c;stroke-width:0.4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect788"
+       width="50.349876"
+       height="22.335871"
+       x="40.330181"
+       y="134.80014" />
+    <rect
+       style="fill:#fefece;fill-opacity:1;stroke:#a80a3c;stroke-width:0.39419;stroke-opacity:1"
+       id="rect788-7"
+       width="50.349876"
+       height="22.335871"
+       x="76.264267"
+       y="67.697067" />
+    <rect
+       style="fill:#fefece;fill-opacity:1;stroke:#a80a3c;stroke-width:0.39419;stroke-opacity:1"
+       id="rect788-3"
+       width="50.349876"
+       height="22.335871"
+       x="99.082481"
+       y="150.19034" />
+    <rect
+       style="fill:#fefece;fill-opacity:1;stroke:#a80a3c;stroke-width:0.39419;stroke-opacity:1"
+       id="rect788-6"
+       width="50.349876"
+       height="22.335871"
+       x="40.509338"
+       y="170.89236" />
+    <path
+       style="fill:none;fill-opacity:1;stroke:#a80a3c;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="m 90.811461,143.57305 8.382621,18.17815 -8.451705,21.24022"
+       id="path1708"
+       sodipodi:nodetypes="ccc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="45.253551"
+       y="149.01653"
+       id="text1949"><tspan
+         sodipodi:role="line"
+         id="tspan1947"
+         style="stroke-width:0.264583"
+         x="45.253551"
+         y="149.01653">trentos.c</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:0.85;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="103.69407"
+       y="160.21361"
+       id="text1953"><tspan
+         sodipodi:role="line"
+         id="tspan1951"
+         style="stroke-width:0.264583"
+         x="103.69407"
+         y="160.21361">Ported</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="103.69407"
+         y="169.20941"
+         id="tspan1955">WolfTPM</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="43.465569"
+       y="185.98447"
+       id="text2009"><tspan
+         sodipodi:role="line"
+         id="tspan2007"
+         style="stroke-width:0.264583"
+         x="43.465569"
+         y="185.98447">bcm2837</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="87.512253"
+       y="81.793732"
+       id="text2013"><tspan
+         sodipodi:role="line"
+         id="tspan2011"
+         style="stroke-width:0.264583"
+         x="87.512253"
+         y="81.793732">Client</tspan></text>
+    <rect
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2116"
+       width="152.34741"
+       height="88.338562"
+       x="15.102201"
+       y="120.3526" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:7.76111px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="16.10322"
+       y="127.1741"
+       id="text2380"><tspan
+         sodipodi:role="line"
+         id="tspan2378"
+         style="font-size:7.76111px;stroke-width:0.264583"
+         x="16.10322"
+         y="127.1741">WolfTPM component</tspan></text>
+    <rect
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.400173;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2382"
+       width="75.483253"
+       height="8.7592974"
+       x="15.202712"
+       y="120.47917" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:0.85;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="30.700228"
+       y="262.30884"
+       id="text2409"><tspan
+         sodipodi:role="line"
+         id="tspan2407"
+         style="stroke-width:0.264583"
+         x="30.700228"
+         y="262.30884">SPI/GPIO </tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="30.700228"
+         y="271.30466"
+         id="tspan2411">Hardware</tspan></text>
+    <rect
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.373139;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2439"
+       width="104.22192"
+       height="59.983501"
+       x="9.8834295"
+       y="223.39139" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:7.76111px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="11.07993"
+       y="230.10168"
+       id="text2443"><tspan
+         sodipodi:role="line"
+         id="tspan2441"
+         style="font-size:7.76111px;stroke-width:0.264583"
+         x="11.07993"
+         y="230.10168">WolfTPM_HW component</tspan></text>
+    <rect
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2474"
+       width="94.090561"
+       height="10.149374"
+       x="9.7996588"
+       y="223.45151" />
+    <rect
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2580"
+       width="52.144817"
+       height="23.476761"
+       x="28.205076"
+       y="251.0536" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="m 28.256384,251.03652 10.822226,-7.24552 51.054961,-0.18575 -9.371516,7.06814 -0.243706,23.94269 8.699444,-8.00837 0.20928,-22.81473"
+       id="path2582" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:0.85;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="132.24034"
+       y="261.59311"
+       id="text2409-3"><tspan
+         sodipodi:role="line"
+         id="tspan2407-5"
+         style="stroke-width:0.264583"
+         x="132.24034"
+         y="261.59311">Infineon </tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="132.24034"
+         y="270.58893"
+         id="tspan2411-6">SLB9670</tspan></text>
+    <rect
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2580-2"
+       width="52.144817"
+       height="23.476761"
+       x="129.74519"
+       y="250.33789" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="m 129.7965,250.3208 10.82222,-7.24552 51.05496,-0.18575 -9.37152,7.06814 -0.2437,23.94269 8.69944,-8.00837 0.20928,-22.81473"
+       id="path2582-9" />
+    <path
+       style="fill:none;stroke:#a80a3c;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:0.8, 0.4;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 65.837729,193.12569 -7.387452,54.09502"
+       id="path2695"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#a80a3c;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-dasharray:0.80000001,0.40000001;stroke-dashoffset:0"
+       d="M 130.03767,263.05256 85.228265,260.99349"
+       id="path2904" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;fill:#a80a3c;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="64.561478"
+       y="218.94019"
+       id="text3578"><tspan
+         sodipodi:role="line"
+         id="tspan3576"
+         style="font-size:7.05556px;fill:#a80a3c;fill-opacity:1;stroke-width:0.264583"
+         x="64.561478"
+         y="218.94019">MMIO</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;fill:#a80a3c;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="95.002174"
+       y="259.91907"
+       id="text3578-1"><tspan
+         sodipodi:role="line"
+         id="tspan3576-2"
+         style="font-size:7.05556px;fill:#a80a3c;fill-opacity:1;stroke-width:0.264583"
+         x="95.002174"
+         y="259.91907">SPI/GPIO</tspan></text>
+    <path
+       style="fill:none;stroke:#a80a3c;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-dasharray:none"
+       d="m 45.008641,134.73175 c 0,0 -58.9083,-53.697205 31.231702,-55.273767"
+       id="path3788" />
+    <path
+       style="fill:none;stroke:#a80a3c;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-dasharray:none"
+       d="M 102.83611,90.301817 67.785336,134.54811"
+       id="path3790" />
+    <path
+       style="fill:none;stroke:#a80a3c;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="m 88.613807,135.16741 c 0,0 88.245853,-0.60657 38.057723,-58.105218"
+       id="path3792"
+       sodipodi:nodetypes="cc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;fill:#a80a3c;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="145.86024"
+       y="111.2886"
+       id="text3796"><tspan
+         sodipodi:role="line"
+         id="tspan3794"
+         style="font-size:7.05556px;stroke-width:0.264583;fill:#a80a3c;fill-opacity:1"
+         x="145.86024"
+         y="111.2886">if_KeyStore</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;fill:#a80a3c;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="95.821823"
+       y="109.41962"
+       id="text3796-7"><tspan
+         sodipodi:role="line"
+         id="tspan3794-0"
+         style="font-size:7.05556px;fill:#a80a3c;fill-opacity:1;stroke-width:0.264583"
+         x="95.821823"
+         y="109.41962">if_Crypto</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;fill:#a80a3c;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="10.518723"
+       y="78.674591"
+       id="text3796-9"><tspan
+         sodipodi:role="line"
+         id="tspan3794-3"
+         style="font-size:7.05556px;fill:#a80a3c;fill-opacity:1;stroke-width:0.264583"
+         x="10.518723"
+         y="78.674591">if_OS_Entropy</tspan></text>
+    <g
+       id="g4718"
+       transform="rotate(30,-37.310515,-41.811568)">
+      <circle
+         style="fill:#ffffff;fill-opacity:1;stroke:#a80a3c;stroke-width:0.4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="path4498"
+         cx="87.487526"
+         cy="44.767128"
+         r="3" />
+      <path
+         style="fill:none;fill-opacity:1;stroke:#a80a3c;stroke-width:0.4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="path4660"
+         sodipodi:type="arc"
+         sodipodi:cx="87.503677"
+         sodipodi:cy="45.357845"
+         sodipodi:rx="5"
+         sodipodi:ry="5"
+         sodipodi:start="3.7524579"
+         sodipodi:end="5.6723201"
+         sodipodi:arc-type="arc"
+         d="m 83.407917,42.489963 a 5,5 0 0 1 4.09576,-2.132118 5,5 0 0 1 4.095761,2.132118"
+         sodipodi:open="true" />
+    </g>
+    <g
+       id="g4718-6"
+       transform="rotate(38.3,0.77612136,79.043826)">
+      <circle
+         style="fill:#ffffff;fill-opacity:1;stroke:#a80a3c;stroke-width:0.4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="path4498-0"
+         cx="87.487526"
+         cy="44.767128"
+         r="3" />
+      <path
+         style="fill:none;fill-opacity:1;stroke:#a80a3c;stroke-width:0.4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="path4660-6"
+         sodipodi:type="arc"
+         sodipodi:cx="87.503677"
+         sodipodi:cy="45.357845"
+         sodipodi:rx="5"
+         sodipodi:ry="5"
+         sodipodi:start="3.7524579"
+         sodipodi:end="5.6723201"
+         sodipodi:arc-type="arc"
+         d="m 83.407917,42.489963 a 5,5 0 0 1 4.09576,-2.132118 5,5 0 0 1 4.095761,2.132118"
+         sodipodi:open="true" />
+    </g>
+    <g
+       id="g4718-2"
+       transform="translate(54.241326,63.671966)">
+      <circle
+         style="fill:#ffffff;fill-opacity:1;stroke:#a80a3c;stroke-width:0.4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="path4498-6"
+         cx="87.487526"
+         cy="44.767128"
+         r="3" />
+      <path
+         style="fill:none;fill-opacity:1;stroke:#a80a3c;stroke-width:0.4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="path4660-1"
+         sodipodi:type="arc"
+         sodipodi:cx="87.503677"
+         sodipodi:cy="45.357845"
+         sodipodi:rx="5"
+         sodipodi:ry="5"
+         sodipodi:start="3.7524579"
+         sodipodi:end="5.6723201"
+         sodipodi:arc-type="arc"
+         d="m 83.407917,42.489963 a 5,5 0 0 1 4.09576,-2.132118 5,5 0 0 1 4.095761,2.132118"
+         sodipodi:open="true" />
+    </g>
+  </g>
+</svg>
