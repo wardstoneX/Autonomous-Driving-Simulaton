@@ -34,7 +34,7 @@ enable_jtag_gpio=0
 Otherwise, the TPM will not work! It will keep reading zeroes over SPI instead
 of actual input.
 
-## Usage
+## Connecting the WolfTPM component
 
 ### CAmkES
 
@@ -109,15 +109,27 @@ CAmkESAddCPPInclude(interfaces/camkes)
 CAmkESAddImportPath(interfaces/camkes)
 ```
 
-### Interfaces
+### C Source Files
 
-#### `if_OS_Entropy_t`
+Include the necessary headers:
 
-Assign the necessary data structure:
+```c
+#include "interfaces/if_OS_Entropy.h"
+#include "if_KeyStore.h"
+#include "if_Crypto.h"
+```
+
+And assign the necessary data structures:
 
 ```c
 if_OS_Entropy_t entropy = IF_OS_ENTROPY_ASSIGN(entropy_rpc, entropy_dp);
+if_KeyStore_t keystore = IF_KEYSTORE_ASSIGN(keystore_rpc, keystore_dp);
+if_Crypto_t crypto = IF_CRYPTO_ASSIGN(crypto_rpc, crypto_dp);
 ```
+
+## Interfaces
+
+### `if_OS_Entropy_t`
 
 This interface provides exactly one function:
 ```
@@ -128,13 +140,7 @@ When invoked, it places `len` bytes in the dataport. If `len` exceeds the size
 of the dataport, it only places as many bytes as the size of the dataport.
 The return value is the amount of bytes that were placed in the dataport.
 
-#### `if_KeyStore`
-
-Assign the necessary data structure:
-
-```c
-if_KeyStore_t keystore = IF_KEYSTORE_ASSIGN(keystore_rpc, keystore_dp);
-```
+### `if_KeyStore`
 
 This interface provides four functions.
 
@@ -170,13 +176,7 @@ Note that in the current implementation, the "handle" is just an offset into
 the NV index. It is possible to manipulate it to get data at a different
 offset.
 
-#### `if_Crypto`
-
-Assign the necessary data structure:
-
-```c
-if_Crypto_t crypto = IF_CRYPTO_ASSIGN(crypto_rpc, crypto_dp);
-```
+### `if_Crypto`
 
 This interface provides an `enum`:
 
@@ -210,7 +210,7 @@ crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CEK, &len))
 crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CSRK, &len))
 ```
 
-### Examples
+## Examples
 
 See the `TestApp` of the `tpm_with_wolftpm` branch for an example of how to
 connect to the `WolfTPM` component and use its functions.
