@@ -183,61 +183,49 @@ void keystore_rpc_getCSRK_RSA1024(uint32_t *exp) {
 
 /* Stores key in NV memory.
  * Returns a handle in case of success, or -1 in case of failure.
- * len is length of the key data in bytes. The exponent is not considered part
- * of key data, it is a separate parameter.
+ * Expects a struct if_KeyStore_Key on the dataport.
  */
-uint32_t keystore_rpc_storeKey(uint32_t len, uint32_t exp) {
-  if (nv_off + len >= NV_MAX_SIZE) {
-    Debug_LOG_ERROR(
-	"No more space in NV! %d (nv_off) + %d (len) > %d (NV_MAX_SIZE)",
-	nv_off, len, NV_MAX_SIZE);
-    return -1;
-  }
+uint32_t keystore_rpc_storeKey(void) {
   uint32_t start = nv_off;
-  /* Write length of key (4 bytes) */
-  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX, (byte*) &len,
-	                      sizeof(len), nv_off),
-      -1);
-  nv_off += sizeof(len);
-  /* Write exponent (4 bytes) */
-  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX, (byte*) &exp,
-	                      sizeof(exp), nv_off),
-      -1);
-  nv_off += sizeof(exp);
-  /* Write key data (len bytes) */
+  uint32_t totalLen;
+  uint32_t keyLen, ivLen;
+  memcpy((char*) &keyLen, OS_Dataport_getBuf(keystorePort), sizeof(uint32_t));
+  memcpy((char*) &ivLen, OS_Dataport_getBuf(keystorePort) + keyLen,
+         sizeof(uint32_t));
+  totalLen = keyLen + ivLen + 8;
   CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
-	                      OS_Dataport_getBuf(keystorePort), len, nv_off),
+	                      OS_Dataport_getBuf(keystorePort),
+			      totalLen, nv_off),
       -1);
-  nv_off += len;
+  nv_off += totalLen;
   return start;
 }
 
 /* Reads key from NV memory. Takes a handle (which actually is an offset...)
  * supplied by storeKey() as argument.
- * Size and exponent of the key are written out to *len and *exp.
+ * Returns 0 in case of success, or non-zero in case of failure.
+ * Places a struct if_KeyStore_Key on the dataport.
  */
-int keystore_rpc_loadKey(uint32_t hdl, uint32_t *len, uint32_t *exp) {
+int keystore_rpc_loadKey(uint32_t hdl) {
   /* TODO: Do we need size checks or does NVReadAuth fail automatically
    *       when we are out of bounds? */
 
   /* Read length of key */
-  uint32_t keySize;
-  uint32_t sz = sizeof(*len);
+  uint32_t keyLen, ivLen;
+  uint32_t sz = sizeof(keyLen);
   CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
-	                    (byte*) &keySize, &sz, hdl), 1);
-  assert(sz == sizeof(*len));
-  *len = keySize;
-  /* Read exponent of key */
-  sz = sizeof(*exp);
+	                    (byte*) &keyLen, &sz, hdl), 1);
+  assert(sz == sizeof(keyLen));
+  /* Read length of IV */
+  sz = sizeof(ivLen);
   CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
-	                    (byte*) exp, &sz, hdl + sizeof(*len)), 1);
-  assert(sz == sizeof(*exp));
+	                    (byte*) &ivLen, &sz, hdl + sizeof(keyLen)), 1);
+  assert(sz == sizeof(ivLen));
   /* Read key data */
-  sz = keySize;
+  sz = keyLen + ivLen + 8;
   CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
-	                     OS_Dataport_getBuf(keystorePort), &sz,
-			     hdl + sizeof(*len) + sizeof(*exp)), 1);
-  assert(sz == keySize);
+	                     OS_Dataport_getBuf(keystorePort), &sz, hdl), 1);
+  assert(sz == keyLen + ivLen + 8);
   return 0;
 }
 

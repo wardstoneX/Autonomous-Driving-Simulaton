@@ -6,11 +6,17 @@
 #define CEK_SIZE	256
 #define CSRK_SIZE	128
 
+struct if_KeyStore_Key {
+  uint32_t keyLenByte;
+  uint32_t ivLenByte;
+  char rawData[];
+};
+
 typedef struct {
   void (*getCEK_RSA2048)(uint32_t *exp);
   void (*getCSRK_RSA1024)(uint32_t *exp);
-  uint32_t (*storeKey)(uint32_t len, uint32_t exp);
-  int (*loadKey)(uint32_t hdl, uint32_t *len, uint32_t *exp);
+  uint32_t (*storeKey)(void);
+  int (*loadKey)(uint32_t hdl);
   OS_Dataport_t dataport;
 } if_KeyStore_t;
 

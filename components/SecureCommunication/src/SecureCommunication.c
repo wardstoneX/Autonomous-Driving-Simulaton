@@ -381,7 +381,7 @@ secureCommunication_rpc_socket_recvfrom(
             memmove(pLen, &read, sizeof(*pLen));
             return ret;
         }
-    } while (read<pLen ||read > 0 || ret == OS_ERROR_TRY_AGAIN);
+    } while (read < *pLen ||read > 0 || ret == OS_ERROR_TRY_AGAIN);
 
     //TODO: erase this line before reactivating decryption
     actualLen = position - buf;

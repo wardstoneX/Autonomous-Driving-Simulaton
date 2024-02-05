@@ -158,18 +158,18 @@ the thread would've been aborted, so the code that invokes these functions
 would've never been reached.
 
 ```c
-uint32_t storeKey(uint32_t len, uint32_t exp)
-int loadKey(uint32_t hdl, uint32_t *len, uint32_t *exp)
+uint32_t storeKey()
+int loadKey(uint32_t hdl)
 ```
 
 These functions are responsible for non-volatile storage of keys.
 
-`storeKey` takes a key length (in bytes) and the key's exponent as parameters,
-and expects the key data itself in the dataport. If successful, it returns a
-handle that can be used to load the key. If failed, it returns `(uint32_t) -1`.
+`storeKey` takes no parameters, but expects the key in the form of a
+`struct if_KeyStore_Key` in the dataport. If successful, it returns a handle
+that can be used to load the key. If failed, it returns `(uint32_t) -1`.
 
-`loadKey` takes a handle created by `storeKey`. It writes out the key length
-to `*len` and the exponent to `*exp`. The key data is placed in the dataport.
+`loadKey` takes a handle created by `storeKey`. It writes out the stored data
+from the NV into the dataport, in the form of a `struct if_KeyStore_Key`.
 It returns `0` on success and non-zero on failure.
 
 Note that in the current implementation, the "handle" is just an offset into
@@ -209,11 +209,6 @@ convenient to perform multiple encryption steps. For example:
 crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CEK, &len))
 crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CSRK, &len))
 ```
-
-## Examples
-
-See the `TestApp` of the `tpm_with_wolftpm` branch for an example of how to
-connect to the `WolfTPM` component and use its functions.
 
 ## Structure
 
