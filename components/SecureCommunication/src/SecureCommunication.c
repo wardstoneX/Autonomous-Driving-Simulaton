@@ -360,25 +360,28 @@ secureCommunication_rpc_socket_recvfrom(
         case OS_SUCCESS:
             position = &position[read];
             break;
+        case OS_ERROR_TRY_AGAIN:
+            Debug_LOG_WARNING("OS_Socket_read() reported try again");
+            continue;
         case OS_ERROR_CONNECTION_CLOSED:
             Debug_LOG_WARNING("connection closed");
             read = 0;
-            break;
+            memmove(pLen, &read, sizeof(*pLen));
+            return ret;
         case OS_ERROR_NETWORK_CONN_SHUTDOWN:
             Debug_LOG_WARNING("connection shut down");
             read = 0;
-            break;
-        case OS_ERROR_TRY_AGAIN:
-                Debug_LOG_WARNING(
-                    "OS_Socket_read() reported try again");
-                seL4_Yield();
-                continue;
+            memmove(pLen, &read, sizeof(*pLen));
+            return ret;
         default:
             Debug_LOG_ERROR("Message retrieval failed while reading, "
                             "OS_Socket_read() returned error code %d, bytes read %zu",
                             ret, (size_t) (position - buf));
+            read = 0;
+            memmove(pLen, &read, sizeof(*pLen));
+            return ret;
         }
-    } while (read > 0 || ret == OS_ERROR_TRY_AGAIN);
+    } while (read<pLen ||read > 0 || ret == OS_ERROR_TRY_AGAIN);
 
     //TODO: erase this line before reactivating decryption
     actualLen = position - buf;
