@@ -1,0 +1,12 @@
+# TODO: Don't forget to commit the FINAL presentation!
+# But it's better to have it ignored by Git for now, as
+# Git is really not designed for large binary files...
+main.pdf
+
+# Ignore LaTeX temporary files
+*.aux
+*.nav
+*.out
+*.snm
+*.toc
+*.log
