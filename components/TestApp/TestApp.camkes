@@ -1,6 +1,9 @@
 /*
  * Copyright (C) 2021, HENSOLDT Cyber GmbH
  */
+
+#include <if_OS_Socket.camkes>
+
 component TestApp {
   control;
 
@@ -15,4 +18,7 @@ component TestApp {
   /* For in-TPM decryption */
   uses		if_Crypto	crypto_rpc;
   dataport	Buf		crypto_dp;
+
+  /* Networking: connection to the secure communication component */
+  IF_OS_SOCKET_USE(secureCommunication)
 };
