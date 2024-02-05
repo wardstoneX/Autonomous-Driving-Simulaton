@@ -7,18 +7,6 @@
 component TestApp {
   control;
 
-  /* For connecting TPM RNG */
-  uses		if_OS_Entropy	entropy_rpc;
-  dataport	Buf		entropy_dp;
-
-  /* For loading and storing keys in the TPM */
-  uses		if_KeyStore	keystore_rpc;
-  dataport	Buf		keystore_dp;
-
-  /* For in-TPM decryption */
-  uses		if_Crypto	crypto_rpc;
-  dataport	Buf		crypto_dp;
-
   /* Networking: connection to the secure communication component */
   IF_OS_SOCKET_USE(secureCommunication)
 };

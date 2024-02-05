@@ -1,31 +1,91 @@
-/*
- * TPM: Component that provides an interface to the TPM
- * TestApp: Program that tests the TPM component
+/**
+ * Main CAmkES configuration file of the exercise demo application.
+ *
+ * Copyright (C) 2021-2023, Hensoldt Cyber GmbH
  */
 
+#include "system_config.h"
+/* os_core_api CAmkES files */
 import <std_connector.camkes>;
 #include "EntropySource/camkes/EntropySource.camkes"
+#include "TimeServer/camkes/TimeServer.camkes"
+/* Network / Network Stack */
+#include "NetworkStack_PicoTcp/camkes/NetworkStack_PicoTcp.camkes"
+#include "plat_nic.camkes"
 
-#include "system_config.h"
+/* Our own components */
 #include "components/WolfTPM/WolfTPM.camkes"
 #include "components/TestApp/TestApp.camkes"
+#include "components/SecureCommunication/SecureCommunication.camkes"
+
+TimeServer_COMPONENT_DEFINE(TimeServer)
+NetworkStack_PicoTcp_COMPONENT_DEFINE(
+    NetworkStack_PicoTcp,
+    NIC_DRIVER_RINGBUFFER_SIZE,
+    NetworkStack_PicoTcp_NO_ADDITIONAL_INTERFACES)
 
 assembly {
   composition {
-    component	TestApp		testApp;
-    component	WolfTPM		wolfTPM;
-    component	WolfTPM_HW	wolfTPM_HW;
+    component	TestApp			testApp;
+    component	WolfTPM			wolfTPM;
+    component	WolfTPM_HW		wolfTPM_HW;
+    component	SecureCommunication	secureCommunication;
 
+    component	TimeServer		timeServer;
+    EXERCISE_DEMO_NIC_INSTANCE(nwDriver)
+    component	NetworkStack_PicoTcp	nwStack;
+
+    /* TPM */
     WolfTPM_HW_CONNECT(wolfTPM, wolfTPM_HW)
     WolfTPM_INSTANCE_CONNECT_CLIENT(
 	wolfTPM,
-	testApp.entropy_rpc, testApp.entropy_dp,
-	testApp.keystore_rpc, testApp.keystore_dp,
-	testApp.crypto_rpc, testApp.crypto_dp
+	secureCommunication.entropy_rpc, secureCommunication.entropy_dp,
+	secureCommunication.keystore_rpc, secureCommunication.keystore_dp,
+	secureCommunication.crypto_rpc, secureCommunication.crypto_dp
+    )
+
+    /* Secure Communication */
+    NetworkStack_PicoTcp_INSTANCE_CONNECT_CLIENTS(
+        nwStack,
+        secureCommunication, networkStack
+    )
+
+    IF_OS_SOCKET_CONNECT(
+        secureCommunication, secureCommunication,
+        testApp, secureCommunication,
+        1
+    )
+
+    /* Network Stack */
+    TimeServer_INSTANCE_CONNECT_CLIENTS(
+        timeServer,
+        EXERCISE_DEMO_NIC_CONNECTION_TIMESERVER(nwDriver)
+        nwStack.timeServer_rpc, nwStack.timeServer_notify
+    )
+
+    NetworkStack_PicoTcp_INSTANCE_CONNECT(
+        nwStack,
+        nwDriver
     )
   }
 
   configuration {
     WolfTPM_HW_CONFIGURE_SELF(wolfTPM_HW)
+
+    TimeServer_CLIENT_ASSIGN_BADGES(
+        EXERCISE_DEMO_NIC_TIMESERVER_CLIENTS(nwDriver)
+        nwStack.timeServer_rpc
+    )
+
+    EXERCISE_DEMO_NIC_CONFIG(nwDriver)
+
+    NetworkStack_PicoTcp_CLIENT_ASSIGN_BADGES(
+        secureCommunication, networkStack
+    )
+
+    NetworkStack_PicoTcp_INSTANCE_CONFIGURE_CLIENTS(
+        nwStack,
+        2
+    )
   }
 }
