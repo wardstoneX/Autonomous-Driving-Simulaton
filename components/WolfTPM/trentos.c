@@ -185,19 +185,19 @@ void keystore_rpc_getCSRK_RSA1024(uint32_t *exp) {
  * Returns a handle in case of success, or -1 in case of failure.
  * Expects a struct if_KeyStore_Key on the dataport.
  */
-uint32_t keystore_rpc_storeKey(void) {
+uint32_t keystore_rpc_storeKey(uint32_t keyLen, uint32_t ivLen) {
   uint32_t start = nv_off;
-  uint32_t totalLen;
-  uint32_t keyLen, ivLen;
-  memcpy((char*) &keyLen, OS_Dataport_getBuf(keystorePort), sizeof(uint32_t));
-  memcpy((char*) &ivLen, OS_Dataport_getBuf(keystorePort) + keyLen,
-         sizeof(uint32_t));
-  totalLen = keyLen + ivLen + 8;
+  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
+	                      (byte*) &keyLen, sizeof(uint32_t), nv_off), -1);
+  nv_off += sizeof(uint32_t);
+  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
+	                      (byte*) &ivLen, sizeof(uint32_t), nv_off), -1);
+  nv_off += sizeof(uint32_t);
+
   CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
 	                      OS_Dataport_getBuf(keystorePort),
-			      totalLen, nv_off),
-      -1);
-  nv_off += totalLen;
+			      keyLen + ivLen, nv_off), -1);
+  nv_off += keyLen + ivLen;
   return start;
 }
 
@@ -206,26 +206,25 @@ uint32_t keystore_rpc_storeKey(void) {
  * Returns 0 in case of success, or non-zero in case of failure.
  * Places a struct if_KeyStore_Key on the dataport.
  */
-int keystore_rpc_loadKey(uint32_t hdl) {
-  /* TODO: Do we need size checks or does NVReadAuth fail automatically
-   *       when we are out of bounds? */
-
+int keystore_rpc_loadKey(uint32_t hdl, uint32_t *keyLen, uint32_t *ivLen) {
   /* Read length of key */
-  uint32_t keyLen, ivLen;
-  uint32_t sz = sizeof(keyLen);
+  uint32_t sz = sizeof(uint32_t);
+  uint32_t off = hdl;
   CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
-	                    (byte*) &keyLen, &sz, hdl), 1);
+	                    (byte*) keyLen, &sz, off), 1);
   assert(sz == sizeof(keyLen));
+  off += sz;
   /* Read length of IV */
-  sz = sizeof(ivLen);
+  sz = sizeof(uint32_t);
   CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
-	                    (byte*) &ivLen, &sz, hdl + sizeof(keyLen)), 1);
+	                    (byte*) ivLen, &sz, off), 1);
   assert(sz == sizeof(ivLen));
+  off += sz;
   /* Read key data */
-  sz = keyLen + ivLen + 8;
+  sz = *keyLen + *ivLen;
   CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
-	                     OS_Dataport_getBuf(keystorePort), &sz, hdl), 1);
-  assert(sz == keyLen + ivLen + 8);
+	                     OS_Dataport_getBuf(keystorePort), &sz, off), 1);
+  assert(sz == *keyLen + *ivLen);
   return 0;
 }
 

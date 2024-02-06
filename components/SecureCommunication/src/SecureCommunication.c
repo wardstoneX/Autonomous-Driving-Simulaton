@@ -692,11 +692,11 @@ static OS_Error_t exchange_keys(void) {
     }
 
     //following block is for debug purposes
-    char* Ksym_bytes[32+12];
-    memmove(Ksym_bytes, OS_Dataport_getBuf(cryptoPort), 32+12);
     Debug_LOG_INFO("PRINTING THE RECEIVED KEY DATA!!!!!!!!!!!!!!");
-    Debug_LOG_INFO("Key: %.32s", Ksym_bytes);
-    Debug_LOG_INFO("IV: %.12s", Ksym_bytes+32);
+    Debug_LOG_INFO("Key:");
+    Debug_DUMP_INFO(OS_Dataport_getBuf(cryptoPort), 32);
+    Debug_LOG_INFO("IV:");
+    Debug_DUMP_INFO(OS_Dataport_getBuf(cryptoPort) + 32, 12);
     /*debug ends here*/
 
      

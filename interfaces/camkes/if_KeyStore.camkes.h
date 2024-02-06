@@ -6,4 +6,4 @@
   void getCEK_RSA2048(out uint32_t pExp); \
   void getCSRK_RSA1024(out uint32_t pExp); \
   uint32_t storeKey(in uint32_t keyLen, in uint32_t ivLen); \
-  int loadKey(in uint32_t hdl, out uint32_t pKeyLen, uint32_t pIvLen);
+  int loadKey(in uint32_t hdl, out uint32_t pKeyLen, out uint32_t pIvLen);
