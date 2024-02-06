@@ -15,7 +15,7 @@ os_set_config_file(
 #-------------------------------------------------------------------------------
 project(demo_tum_course C)
 
-include("plat/${PLATFORM}/plat_nic.cmake")
+#include("plat/${PLATFORM}/plat_nic.cmake")
 
 TimeServer_DeclareCAmkESComponent(
     TimeServer
@@ -30,11 +30,28 @@ NetworkStack_PicoTcp_DeclareCAmkESComponent(
         -DSUBNET_MASK=ETH_SUBNET_MASK
 )
 
+DeclareCAmkESComponents_for_UARTs()
+
+NIC_ChanMux_DeclareCAmkESComponent(
+    NIC_ChanMux
+    CHANMUX_CHANNEL_NIC_CTRL
+    CHANMUX_CHANNEL_NIC_DATA
+)
+
+ChanMux_UART_DeclareCAmkESComponents(
+    ChanMux_UART
+    components/ChanMux/ChanMux_config.c
+    system_config
+)
+
 
 DeclareCAmkESComponent(
     TestApp
+    INCLUDES
+        include/scv
     SOURCES
-        components/TestApp/src/TestApp.c
+        components/TestApp/src/TestApp.c         
+        include/scv/scv.c
     C_FLAGS
         -Wall
         -Werror
@@ -47,3 +64,5 @@ DeclareCAmkESComponent(
 
 DeclareAndCreateCamkESSystem(demo_tum_course.camkes)
 GenerateSimulateScript()
+
+

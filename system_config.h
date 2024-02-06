@@ -44,11 +44,11 @@
 //-----------------------------------------------------------------------------
 #define OS_NETWORK_MAXIMUM_SOCKET_NO 1
 
-#define CFG_TEST_HTTP_SERVER      "10.0.0.10"
+#define CFG_TEST_HTTP_SERVER      "10.0.0.1"
 #define ETH_ADDR                  "10.0.0.11"
 #define ETH_GATEWAY_ADDR          "10.0.0.1"
 #define ETH_SUBNET_MASK           "255.255.255.0"
-#define EXERCISE_CLIENT_PORT      8080
+#define EXERCISE_CLIENT_PORT      6000
 
 
 //-----------------------------------------------------------------------------
@@ -57,3 +57,20 @@
 #define NIC_DRIVER_RINGBUFFER_NUMBER_ELEMENTS 16
 #define NIC_DRIVER_RINGBUFFER_SIZE                                             \
     (NIC_DRIVER_RINGBUFFER_NUMBER_ELEMENTS * 4096)
+
+
+
+//-----------------------------------------------------------------------------
+// ChanMUX
+//-----------------------------------------------------------------------------
+
+#define CHANMUX_CHANNEL_NIC_CTRL      4
+#define CHANMUX_CHANNEL_NIC_DATA      5
+
+
+
+//-----------------------------------------------------------------------------
+// ChanMUX clients
+//-----------------------------------------------------------------------------
+
+#define CHANMUX_ID_NIC        101

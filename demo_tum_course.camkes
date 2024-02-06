@@ -8,6 +8,9 @@ import <std_connector.camkes>;
 
 #include "system_config.h"
 
+#include "UART/Uart.camkes"
+
+
 //----------------------------------------------------------------------
 // TimeServer
 //----------------------------------------------------------------------
@@ -19,12 +22,31 @@ TimeServer_COMPONENT_DEFINE(TimeServer)
 // Network
 //----------------------------------------------------------------------
 
-#include "plat_nic.camkes"
+//#include "plat_nic.camkes"
 
 //----------------------------------------------------------------------
 // Network Stack
 //----------------------------------------------------------------------
 
+//----------------------------------------------------------------------
+
+#include "ChanMux/ChanMux_UART.camkes"
+ChanMux_UART_COMPONENT_DEFINE(ChanMux_UART,
+                              nic_ChanMux,
+                              ctrl, nic_ChanMux, data)
+
+//UART_COMPONENT_DEFINE(UART_0, {"path":"/amba/serial@e0000000"})
+
+
+
+#include "NIC_ChanMux/NIC_ChanMux.camkes"
+NIC_ChanMux_COMPONENT_DEFINE(NIC_ChanMux, NIC_DRIVER_RINGBUFFER_SIZE)
+
+
+
+
+
+//----------------------------------------------------------------------
 #include "NetworkStack_PicoTcp/camkes/NetworkStack_PicoTcp.camkes"
 
 NetworkStack_PicoTcp_COMPONENT_DEFINE(
@@ -40,6 +62,33 @@ NetworkStack_PicoTcp_COMPONENT_DEFINE(
 
 assembly {
     composition {
+        component ChanMux_UART chanMux_UART;
+        component UART_0 uart;
+        component NIC_ChanMux nic_ChanMux;
+        component NetworkStack_PicoTcp    nwStack;
+
+        ChanMux_UART_INSTANCE_CONNECT(
+            chanMux_UART,
+            uart
+        )
+        // ?
+        ChanMux_UART_INSTANCE_CONNECT_CLIENT(
+            chanMux_UART,
+            nic_ChanMux, ctrl, data
+        )
+
+
+        IF_OS_NIC_CONNECT(
+            nic_ChanMux,
+            nic,
+            nwStack,
+            nic,
+            event_tick_or_data
+        )
+
+
+
+
 
         //----------------------------------------------------------------------
         // TimeServer
@@ -48,24 +97,31 @@ assembly {
 
         TimeServer_INSTANCE_CONNECT_CLIENTS(
             timeServer,
-            EXERCISE_DEMO_NIC_CONNECTION_TIMESERVER(nwDriver)
+            //EXERCISE_DEMO_NIC_CONNECTION_TIMESERVER(nwDriver)
             nwStack.timeServer_rpc, nwStack.timeServer_notify
         )
 
         //----------------------------------------------------------------------
         // Network Driver
         //----------------------------------------------------------------------
-        EXERCISE_DEMO_NIC_INSTANCE(nwDriver)
+
+        //EXERCISE_DEMO_NIC_INSTANCE(nwDriver)
+        //component NwDriver nwDriver;
+
+        //ChanMux_UART_INSTANCE_CONNECT_CLIENT(
+          //  chanMux_UART,
+           // nwDriver, data, ctrl
+        //)
 
         //----------------------------------------------------------------------
         // Network Stack
         //----------------------------------------------------------------------
-        component NetworkStack_PicoTcp    nwStack;
+        
 
-        NetworkStack_PicoTcp_INSTANCE_CONNECT(
-            nwStack,
-            nwDriver
-        )
+        //NetworkStack_PicoTcp_INSTANCE_CONNECT(
+          //  nwStack,
+            //nic_ChanMux
+        //)
 
         component   TestApp      testApp;
 
@@ -73,15 +129,18 @@ assembly {
             nwStack,
             testApp, networkStack
         )
+        
+       
+        
     }
 
     configuration {
         TimeServer_CLIENT_ASSIGN_BADGES(
-            EXERCISE_DEMO_NIC_TIMESERVER_CLIENTS(nwDriver)
+            //EXERCISE_DEMO_NIC_TIMESERVER_CLIENTS(nwDriver)
             nwStack.timeServer_rpc
         )
 
-        EXERCISE_DEMO_NIC_CONFIG(nwDriver)
+        //EXERCISE_DEMO_NIC_CONFIG(nwDriver)
 
         NetworkStack_PicoTcp_CLIENT_ASSIGN_BADGES(
             testApp, networkStack
@@ -89,7 +148,12 @@ assembly {
 
         NetworkStack_PicoTcp_INSTANCE_CONFIGURE_CLIENTS(
             nwStack,
-            2
+           2
         )
+
+        ChanMux_UART_CLIENT_ASSIGN_BADGES( 
+            nic_ChanMux.chanMux_Rpc
+        )
+
     }
 }

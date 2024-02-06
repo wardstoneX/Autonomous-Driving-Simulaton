@@ -12,6 +12,112 @@
 #include <string.h>
 
 #include <camkes.h>
+#include <netinet/in.h>
+
+#include "scv.h"
+#include <stdlib.h>
+#include <tgmath.h>
+
+struct Tuple {
+    float x;
+    float y;
+    float z;
+};
+
+
+
+struct scv_vector *vector;
+
+struct scv_vector *vectors_radar;
+
+
+ssize_t leftover_size = 0;
+char leftover[1024];
+struct scv_vector *inner_vector = NULL;
+
+
+
+void process_buffer(char* buffer, ssize_t size) {
+
+
+
+				
+    int start = 0;
+    while (start < size) {
+        // Check if there's enough data to parse the header
+        if (size - start < 5) {
+            break; // Wait for the rest of the header to arrive
+        }
+
+        // Check the type of data
+        if (buffer[start] == '\x13') {
+            // Parse the size of the data
+            int data_size;
+            memcpy(&data_size, buffer + start + 1, sizeof(int));
+            data_size = ntohl(data_size); // Convert from network to host byte order
+
+            // Check if the complete message has been received
+            if (start + 5 + data_size > size) {
+                break; // Wait for the rest of the message to arrive
+            }
+
+            // Parse the data
+            struct Tuple tuple;
+            
+            sscanf(buffer + start + 5, "%f,%f,%f", &tuple.x, &tuple.y, &tuple.z);
+            //Debug_LOG_INFO("Tuple: (%f, %f, %f)\n",  tuple.x, tuple.y, tuple.z);
+
+            scv_push_back(vector, &tuple);
+            
+
+            start += 5 + data_size; // Move to the start of the next message
+        } else if(buffer[start] == '\x14') {
+			int data_size;
+            memcpy(&data_size, buffer + start + 1, sizeof(int));
+            data_size = ntohl(data_size); // Convert from network to host byte order
+
+			 // Check if the complete message has been received
+            if (start + 5 + data_size > size) {
+                break; // Wait for the rest of the message to arrive
+            }
+
+            // Parse the data
+            struct Tuple tuple;
+            sscanf(buffer + start + 5, "%f,%f,%f",&tuple.x, &tuple.y, &tuple.z);
+
+            //Debug_LOG_INFO("Tuple: (%f, %f, %f)\n",  tuple.x, tuple.y, tuple.z);
+
+            if(inner_vector == NULL) {
+                inner_vector = scv_new(sizeof(struct Tuple), 10);
+            }
+
+            //printf("Quadruple: distance = %f, x = %f, y = %f, z = %f\n", quadruple.distance, quadruple.x, quadruple.y, quadruple.z);
+
+            scv_push_back(inner_vector, &tuple);
+
+            start += 5 + data_size; 
+		} else if(buffer[start] == '\x15') {
+            // End of batch, prepare for the next one
+            scv_push_back(vectors_radar, &inner_vector);
+
+
+            inner_vector = NULL;
+            start++;
+        } else {
+            // Handle other types of data
+            start++;
+        }
+    }
+
+     if (start < size) {
+        memmove(leftover, buffer + start, size - start);
+        leftover_size = size - start; // Update the size of the leftover data
+    } else {
+        leftover_size = 0; // No leftover data
+    }
+}
+
+
 
 
 
@@ -31,7 +137,7 @@ waitForNetworkStackInit(
 
     for (;;)
     {
-        networkStackState = OS_Socket_getStatus(ctx);
+       networkStackState = OS_Socket_getStatus(ctx);
         if (networkStackState == RUNNING)
         {
             // NetworkStack up and running.
@@ -157,9 +263,13 @@ waitForConnectionEstablished(
 int run()
 {
     Debug_LOG_INFO("Starting test_app_server...");
+    vector = scv_new(sizeof(struct Tuple), 10);
+	vectors_radar = scv_new(sizeof(struct scv_vector*), 10);
 
     // Check and wait until the NetworkStack component is up and running.
     OS_Error_t ret = waitForNetworkStackInit(&networkStackCtx);
+    Debug_LOG_INFO("network stack is initialized...");
+
     if (OS_SUCCESS != ret)
     {
         Debug_LOG_ERROR("waitForNetworkStackInit() failed with: %d", ret);
@@ -172,6 +282,8 @@ int run()
               &hSocket,
               OS_AF_INET,
               OS_SOCK_STREAM);
+       Debug_LOG_INFO("socket is created...");
+          
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("OS_Socket_create() failed, code %d", ret);
@@ -185,6 +297,8 @@ int run()
     };
 
     ret = OS_Socket_connect(hSocket, &dstAddr);
+        Debug_LOG_INFO("socket is connected...");
+
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("OS_Socket_connect() failed, code %d", ret);
@@ -193,6 +307,8 @@ int run()
     }
 
     ret = waitForConnectionEstablished(hSocket.handleID);
+        Debug_LOG_INFO("connection is established...");
+
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("waitForConnectionEstablished() failed, error %d", ret);
@@ -200,65 +316,65 @@ int run()
         return -1;
     }
 
-    Debug_LOG_INFO("Send request to host...");
+    
 
-    char* request = "GET /index.html HTTP/1.0\r\n\r\n";
-
-    size_t len_request = strlen(request);
-    size_t n;
-
-    do
-    {
-        seL4_Yield();
-        ret = OS_Socket_write(hSocket, request, len_request, &n);
-    }
-    while (ret == OS_ERROR_TRY_AGAIN);
-
-    if (OS_SUCCESS != ret)
-    {
-        Debug_LOG_ERROR("OS_Socket_write() failed with error code %d", ret);
-    }
 
     Debug_LOG_INFO("HTTP request successfully sent");
 
-    static char buffer[OS_DATAPORT_DEFAULT_SIZE];
-    char* position = buffer;
+    char buffer[OS_DATAPORT_DEFAULT_SIZE];
+   
     size_t read = 0;
+  
+	
+
+  
+   
 
     do {
         seL4_Yield();
-        ret = OS_Socket_read(hSocket, position, sizeof(buffer) - (position - buffer), &read);
+        ret = OS_Socket_read(hSocket, buffer, sizeof(buffer)-1, &read);
 
-        Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
+        //Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
+        
 
-        switch (ret)
-        {
-        case OS_SUCCESS:
-            position = &position[read];
-            break;
-        case OS_ERROR_CONNECTION_CLOSED:
-            Debug_LOG_WARNING("connection closed");
-            read = 0;
-            break;
-        case OS_ERROR_NETWORK_CONN_SHUTDOWN:
-            Debug_LOG_WARNING("connection shut down");
-            read = 0;
-            break;
-        case OS_ERROR_TRY_AGAIN:
-                Debug_LOG_WARNING(
-                    "OS_Socket_read() reported try again");
-                seL4_Yield();
-                continue;
-        default:
-            Debug_LOG_ERROR("HTTP page retrieval failed while reading, "
-                            "OS_Socket_read() returned error code %d, bytes read %zu",
-                            ret, (size_t) (position - buffer));
-        }
+
+       if( read > 0) {
+            Debug_LOG_INFO("Bytes read: %d", read);
+           
+
+
+            char temp[sizeof(buffer) + leftover_size];
+			if (leftover_size > 0) {
+				memcpy(temp, leftover, leftover_size);
+				memcpy(temp + leftover_size, buffer, read);
+			} else {
+				memcpy(temp, buffer, read);
+			}
+			process_buffer(temp, read + leftover_size);
+            
+       }
+
+
     } while (read > 0 || ret == OS_ERROR_TRY_AGAIN);
+    
 
-    // Ensure buffer is null-terminated before printing it
-    buffer[sizeof(buffer) - 1] = '\0';
-    Debug_LOG_INFO("Got HTTP Page:\n%s", buffer);
+            Debug_LOG_INFO("printign vectors..");
+
+     for (size_t i = 0; i < vector->size; ++i) {
+        struct Tuple *tuple = scv_at(vector, i);
+        Debug_LOG_INFO("Tuple %zu: (%f, %f, %f)\n", i, tuple->x, tuple->y, tuple->z);
+    }
+
+    for (size_t i = 0; i < vectors_radar->size; ++i) {
+        struct scv_vector *inner_vector = scv_at(vectors_radar, i);
+    
+        Debug_LOG_INFO("Inner vector %zu: ", i);
+        for (size_t j = 0; j < inner_vector->size; ++j) {
+            struct Tuple *tuple = scv_at(inner_vector, j);
+        Debug_LOG_INFO("Tuple %zu: (%f, %f, %f)\n", j, tuple->x, tuple->y, tuple->z);
+        }
+        Debug_LOG_INFO("\n");
+    }
 
 
     OS_Socket_close(hSocket);
