@@ -10,12 +10,13 @@
 
 #include "OS_Crypto.h"
 #include <camkes.h>
-/*
-#include "OS_FileSystem.h"
-#include "OS_KeystoreFile.h"
-*/
 
 #include "SecureCommunication.h"
+
+#include "interfaces/if_OS_Entropy.h"
+#include "if_KeyStore.h"
+#include "if_Crypto.h"
+
 
 
 //can't include "network_stack_core.h" for some reason
@@ -60,33 +61,33 @@ static const OS_Crypto_Config_t cryptoCfg =
 
 
 
-
+/*
 // Definition of a key-generation spec for a 256-bit AES key
-static OS_CryptoKey_Spec_t rsa_prv_spec = {
+static OS_CryptoKey_Spec_t aes_spec = {
     .type = OS_CryptoKey_SPECTYPE_BITS,
     .key = {
-        .type = OS_CryptoKey_TYPE_RSA_PRV,
-        .params.bits = 2048
+        .type = OS_CryptoKey_TYPE_AES,
+        .params.bits = 256
     }
 };
+*/
+
 
 
 
 static OS_CryptoKey_Attrib_t attr = {.flags = 0, .keepLocal = 1};
 
 
-// Provide 12 bytes of IV for AES-GCM
-size_t iv_size = 12;
-uint8_t iv[12] = {0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b};
 
 
 static OS_Crypto_Handle_t hCrypto;
 
-static OS_CryptoKey_Handle_t EK_prv;
-static OS_CryptoKey_Handle_t EK_pub;
+//static OS_Dataport_t entropyPort = OS_DATAPORT_ASSIGN(entropy_dp);
+static OS_Dataport_t keystorePort = OS_DATAPORT_ASSIGN(keystore_dp);
+static OS_Dataport_t cryptoPort = OS_DATAPORT_ASSIGN(crypto_dp);
 
-//static OS_CryptoKey_Handle_t SRK_prv;
-//static OS_CryptoKey_Handle_t SRK_pub;
+if_KeyStore_t keystore = IF_KEYSTORE_ASSIGN(keystore_rpc, keystore_dp);
+if_Crypto_t crypto = IF_CRYPTO_ASSIGN(crypto_rpc, crypto_dp);
 
 
 
@@ -104,11 +105,11 @@ void post_init(void) {
     } while (ret != OS_SUCCESS);
     Debug_LOG_INFO("Setup completed.");
 
-    /*/
+
     do{
         ret = exchange_keys();
     } while (ret != OS_SUCCESS);
-    */
+
 
     
     Debug_LOG_INFO("Waiting for NetworkStack_PicoTcp to be initialized");
@@ -381,7 +382,7 @@ secureCommunication_rpc_socket_recvfrom(
             memmove(pLen, &read, sizeof(*pLen));
             return ret;
         }
-    } while (read < *pLen ||read > 0 || ret == OS_ERROR_TRY_AGAIN);
+    } while (read > 0 || ret == OS_ERROR_TRY_AGAIN);
 
     //TODO: erase this line before reactivating decryption
     actualLen = position - buf;
@@ -522,55 +523,49 @@ static OS_Error_t secureCommunication_setup(){
 
     //setup crypto objects
     Debug_LOG_INFO("Initializing Crypto API.\n");
-    OS_Crypto_init(&hCrypto, &cryptoCfg);
+    ret = OS_Crypto_init(&hCrypto, &cryptoCfg);
 
-
-    //generate EK_pub, EK_prv
-    if((ret = OS_CryptoKey_generate(&EK_prv, hCrypto, &rsa_prv_spec)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Failed to generate EK_prv, err: %d", ret);
-        return ret;
-    }
-    if((ret = OS_CryptoKey_makePublic(&EK_pub, hCrypto, EK_prv, &attr)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Failed to generate EK_pub, err: %d", ret);
-        return ret;
-    }
 
     return ret;
 
 }
 
 
-/*
+
 static OS_Error_t exchange_keys(void) {
     OS_Error_t ret;
 
-    //1.- take ownership of the tpm
+    //TODO: 1.- take ownership of the tpm
     
-    if((ret = OS_Keystore_wipeKeystore(hKeys)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Failed to wipe keystore, err: %d", ret);
-    }
+    
     
 
     //2.- create new srk
-    
-    OS_CryptoKey_Handle_t SRK_prv;
-    OS_CryptoKey_Handle_t SRK_pub;
-    
+    uint32_t exp_SRK;
+    keystore.getCSRK_RSA1024(&exp_SRK);
+    uint8_t cSRK_ssh[7 + 3*sizeof(uint32_t) + 1024/8];
+    if(toOpenSSHPublicRSA((uint8_t*)exp_SRK, 4, OS_Dataport_getBuf(keystorePort), 1024/8, cSRK_ssh, sizeof(cSRK_ssh)) != sizeof(cSRK_ssh)) {
+        Debug_LOG_WARNING("Something went wrong when converting cSRK to OpenSSH format");
+    }
 
-    if((ret = OS_CryptoKey_generate(&SRK_prv, hCrypto, &rsa_prv_spec)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Failed to generate SRK_prv, err: %d", ret);
-    }
-    if((ret = OS_CryptoKey_makePublic(&SRK_pub, hCrypto, SRK_prv, &attr)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Failed to generate SRK_pub, err: %d", ret);
-    }
 
 
     //3.- connect to python client and send EK_pub, SRK_pub
+    uint32_t exp_EK;
+    keystore.getCEK_RSA2048(&exp_EK);
+    uint8_t cEK_ssh[7 + 3*sizeof(uint32_t) + 2048/8];
+    if(toOpenSSHPublicRSA((uint8_t*)exp_EK, 4, OS_Dataport_getBuf(keystorePort), 2048/8, cEK_ssh, sizeof(cEK_ssh)) != sizeof(cEK_ssh)) {
+        Debug_LOG_WARNING("Something went wrong when converting cEK to OpenSSH format");
+    }
+
+
+
     Debug_LOG_INFO("Establishing connection to python client on keyexchange port");
 
     if ((ret = waitForNetworkStackInit(&networkStackCtx)) != OS_SUCCESS)
     {
         Debug_LOG_ERROR("waitForNetworkStackInit() failed with: %d", ret);
+        return ret;
     }
 
     OS_Socket_Handle_t hSocket;
@@ -582,11 +577,12 @@ static OS_Error_t exchange_keys(void) {
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("OS_Socket_create() failed, code %d", ret);
+        return ret;
     }
 
     const OS_Socket_Addr_t dstAddr =
     {
-        .addr = CFG_TEST_HTTP_SERVER,
+        .addr = PYTHON_ADDR,
         .port = CRYPTO_PORT
     };
 
@@ -603,59 +599,37 @@ static OS_Error_t exchange_keys(void) {
     {
         Debug_LOG_ERROR("waitForConnectionEstablished() failed, error %d", ret);
         OS_Socket_close(hSocket);
-        return -1;
+        return ret;
     }
 
     Debug_LOG_INFO("Connection established, sending EK_pub and SRK_pub to python client");
-    OS_CryptoKey_Data_t EK_pub_data;
-    OS_CryptoKey_Data_t SRK_pub_data;
-    if((ret = OS_CryptoKey_export(EK_pub, &EK_pub_data)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("EK_pub could not be exported, err: %d", ret);
-    }
-    if((ret = OS_CryptoKey_export(SRK_pub, &SRK_pub_data)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("SRK_pub could not be exported, err: %d", ret);
-    }
-
-
-
-    uint32_t EK_eLen = EK_pub_data.data.rsa.pub.eLen;
-    uint32_t EK_nLen = EK_pub_data.data.rsa.pub.nLen;
-    uint32_t SRK_eLen = SRK_pub_data.data.rsa.pub.eLen;
-    uint32_t SRK_nLen = SRK_pub_data.data.rsa.pub.nLen;
-
-
-    uint32_t EK_SSH_length = 19 + EK_eLen + EK_nLen;
-    uint32_t SRK_SSH_length = 19 + SRK_eLen + SRK_nLen;
-
-    //the 4 extra bytes at the beginning will let the python client separate the EK from the SRK by stating the size of the EK
-    size_t len_message = 4 + EK_SSH_length + SRK_SSH_length;
-    uint8_t* message = malloc(len_message); 
-
-    memmove(message, &EK_SSH_length, 4);
-    int ssh_written;
-    if(EK_SSH_length != (ssh_written = toOpenSSHPublicRSA(EK_pub_data.data.rsa.pub.eBytes, EK_eLen, EK_pub_data.data.rsa.pub.nBytes, EK_nLen, message+4, EK_SSH_length))) {
-        Debug_LOG_WARNING("EK could not be exported properly, %d out of %d bytes processed", ssh_written, EK_SSH_length);
-    }
-    if(SRK_SSH_length != (ssh_written = toOpenSSHPublicRSA(SRK_pub_data.data.rsa.pub.eBytes, SRK_eLen, SRK_pub_data.data.rsa.pub.nBytes, SRK_nLen, message+4+EK_SSH_length, SRK_SSH_length))) {
-        Debug_LOG_WARNING("SRK could not be exported properly, %d out of %d bytes processed", ssh_written, SRK_SSH_length);
-    }
     
+    /**
+     * The payload consists of 4 bytes stating the length of cEK, followed by the bytes of cEK and cSRK in OpenSSH format.
+     */
+    uint32_t cEK_ssh_size = sizeof(cEK_ssh);
+    char* payload[sizeof(cEK_ssh_size) + sizeof(cEK_ssh) + sizeof(cSRK_ssh)];
+    memmove(payload, &cEK_ssh_size, sizeof(uint32_t));
+    memmove(payload + sizeof(uint32_t), cEK_ssh, sizeof(cEK_ssh));
+    memmove(payload + sizeof(uint32_t)+ sizeof(cEK_ssh), cSRK_ssh, sizeof(cSRK_ssh));
 
-
-    
+    Debug_LOG_INFO("PRINTING THE GENERATED EK SSH");
+    printf("OpenSSH of cEK: %.*s", sizeof(cEK_ssh), cEK_ssh);
+  
     size_t n;
+    size_t payload_len = sizeof(payload);
 
     do
     {
         seL4_Yield();
-        ret = OS_Socket_write(hSocket, message, len_message, &n);
+        ret = OS_Socket_write(hSocket, payload, payload_len, &n);
     }
     while (ret == OS_ERROR_TRY_AGAIN);
-    free(message);
 
     if (OS_SUCCESS != ret)
     {
         Debug_LOG_ERROR("OS_Socket_write() failed with error code %d", ret);
+        return ret;
     }
 
     Debug_LOG_INFO("Public keys successfully sent");
@@ -700,43 +674,32 @@ static OS_Error_t exchange_keys(void) {
     } while (read > 0 || ret == OS_ERROR_TRY_AGAIN);
 
     Debug_LOG_INFO("Received %d bytes as a response", position - buffer);
-    char outer_ciphertext[position - buffer];
-    memmove(outer_ciphertext, buffer, sizeof(outer_ciphertext));
+    char ciphertext[position - buffer];
+    memmove(ciphertext, buffer, sizeof(ciphertext));
 
 
     //7.- decrypt the ciphertext to get K_sym
     Debug_LOG_INFO("Decrypting...");
-    OS_CryptoCipher_Handle_t hCipher;
-    uint8_t inner_ciphertext[OS_DATAPORT_DEFAULT_SIZE];
-    size_t inner_length = sizeof(inner_ciphertext);
-    if((ret = OS_CryptoCipher_init(&hCipher, hCrypto, EK_prv, OS_CryptoCipher_ALG_AES_GCM_DEC, NULL, 0)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Cipher object could not be initialized, err: %d", ret);
-    }
-    if((ret = OS_CryptoCipher_start(hCipher, NULL, 0)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Cipher processing could not be started, err: %d", ret);
-    }
-    if((ret = OS_CryptoCipher_process(hCipher, outer_ciphertext, sizeof(outer_ciphertext), inner_ciphertext, &inner_length)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Decryption failed, err: %d", ret);
-    }
-    if((ret = OS_CryptoCipher_finalize(hCipher, NULL, 0)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Cipher object could not be finalized, err: %d", ret);
+
+    int len = sizeof(ciphertext);
+    memmove(OS_Dataport_getBuf(cryptoPort), ciphertext, len);
+    crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CEK, &len);
+    crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CSRK, &len);
+
+    if(len != 12 + 32) {
+        Debug_LOG_WARNING("Something might have gone wrong, received %d bytes instead of %d", len, 12+32);
     }
 
-    uint8_t plaintext[OS_DATAPORT_DEFAULT_SIZE];
-    size_t plain_length = sizeof(plaintext);
-    if((ret = OS_CryptoCipher_init(&hCipher, hCrypto, SRK_prv, OS_CryptoCipher_ALG_AES_GCM_DEC, NULL, 0)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Cipher object could not be initialized, err: %d", ret);
-    }
-    if((ret = OS_CryptoCipher_start(hCipher, NULL, 0)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Cipher processing could not be started, err: %d", ret);
-    }
-    if((ret = OS_CryptoCipher_process(hCipher, inner_ciphertext, inner_length, plaintext, &plain_length)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Decryption failed, err: %d", ret);
-    }
-    if((ret = OS_CryptoCipher_finalize(hCipher, NULL, 0)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Cipher object could not be finalized, err: %d", ret);
-    }
 
+    char iv[12];
+    char key_bytes[32];
+    
+    memmove(iv, OS_Dataport_getBuf(cryptoPort), 12);
+    memmove(key_bytes, OS_Dataport_getBuf(cryptoPort) + 12, 32);
+
+    Debug_LOG_INFO("PRINTING THE RECEIVED KEY DATA!!!!!!!!!!!!!!");
+    Debug_LOG_INFO("IV: %.12s", iv);
+    Debug_LOG_INFO("Key: %.32s", key_bytes);
 
 
     Debug_LOG_INFO("Loading data into key object");
@@ -750,20 +713,22 @@ static OS_Error_t exchange_keys(void) {
     K_data.type = OS_CryptoKey_TYPE_AES;
     K_data.attribs = attr;
     K_data.data.aes.len = 32;
-    memmove(K_data.data.aes.bytes, plaintext, K_data.data.aes.len);
+    memmove(K_data.data.aes.bytes, key_bytes, 32);
 
 
-    //8.- store K_sym in the keystore
+    //TODO: 8.- store K_sym in the keystore
     
+    /*
     if((ret = OS_Keystore_storeKey(hKeys, "symmetric key", &K_data, sizeof(K_data))) != OS_SUCCESS) {
         Debug_LOG_WARNING("Failed to store key data in the key store, err: %d", ret);
     }
+    */
     
 
     Debug_LOG_INFO("Key sucessfully exchanged");
     return ret;
 }
-*/
+
 
 
 static OS_Error_t

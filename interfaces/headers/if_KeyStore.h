@@ -20,11 +20,11 @@ typedef struct {
   OS_Dataport_t dataport;
 } if_KeyStore_t;
 
-#define IF_KEYSTORE_ASSIGN(_rpc_, _port_) \
-{ \
-  .getCEK_RSA2048	= _rpc_ ## _getCEK_RSA2048, \
-  .getCSRK_RSA1024	= _rpc_ ## _getCSRK_RSA1024, \
-  .storeKey		= _rpc_ ## _storeKey, \
-  .loadKey		= _rpc_ ## _loadKey, \
-  .dataport		= OS_DATAPORT_ASSIGN(_port_) \
+#define IF_KEYSTORE_ASSIGN(_rpc_, _port_)       \
+{                                               \
+  .getCEK_RSA2048	= _rpc_##_getCEK_RSA2048,     \
+  .getCSRK_RSA1024	= _rpc_##_getCSRK_RSA1024,  \
+  .storeKey		= _rpc_##_storeKey,               \
+  .loadKey		= _rpc_##_loadKey,                \
+  .dataport		= OS_DATAPORT_ASSIGN(_port_)      \
 }

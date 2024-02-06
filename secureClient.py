@@ -1,10 +1,11 @@
 import socket
 import os
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1
 from cryptography.hazmat.primitives.serialization import load_ssh_public_key, PublicFormat, Encoding
+from cryptography.hazmat.primitives.hashes import HashAlgorithm
 
-HOST = "127.0.0.1"      #arbitrary, make sure to configure on the computer when running the python client
+HOST = "10.0.0.10"      #arbitrary, make sure to configure on the computer when running the python client
 CRYPTO_PORT = 65432     #arbitrary, add later to system_config.h
 COMM_PORT = 1234        #arbitrary, add later to system_config.h
 
@@ -42,6 +43,8 @@ def setup_crypto_config():
 
             #4.- compare received EK_pub with stored hash
             #TODO
+            print("PRINTING THE RECEIVED VALUE OF EK")
+            print(f"OpenSSH cEK: {data[4:4+EK_size]}")
 
 
             #5.- generate K_sym and encrypt: ciphertext = encrypt(EK_pub, encrypt(SRK_pub, K_sym))
@@ -49,41 +52,29 @@ def setup_crypto_config():
             key = os.urandom(32)
             iv = os.urandom(12)
 
+            print("PRINTING DETAILS OF THE GENERATED AES KEY")
+            print(f"IV: {iv}")
+            print(f"Key: {key}")
+
             #the TestApp is already expecting a 12 byte IV and 256 bit key, so we can send the IV concatenated with the key, without extra length tags
             k_sym = iv + key
-            #TODO: encrypt the K_sym once the TPM's padding protocol is known
-            ciphertext = k_sym
-            '''
-            ---VERSION WITH PSKSV15---
+            
             inner_cipher = SRK_pub.encrypt(
                 k_sym,
-                padding.PKCS1v15
+                OAEP(
+                    mgf=MGF1(algorithm=HashAlgorithm.SHA256()),
+                    algorithm=HashAlgorithm.SHA256(),
+                    label=None
+                )
             )
             ciphertext = EK_pub.encrypt(
                 inner_cipher,
-                padding.PKCS1v15
-            )
-            
-                
-            ---VERSION WITH OAEP---
-            inner_cipher = public_key.encrypt(
-                k_sym,
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                    algorithm=hashes.SHA256(),
+                OAEP(
+                    mgf=MGF1(algorithm=HashAlgorithm.SHA256()),
+                    algorithm=HashAlgorithm.SHA256(),
                     label=None
                 )
             )
-            ciphertext = public_key.encrypt(
-                inner_cipher,
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                    algorithm=hashes.SHA256(),
-                    label=None
-                )
-            )
-            '''
-
 
             #6.- send ciphertext to app
             conn.sendall(ciphertext)
@@ -117,6 +108,18 @@ print("python dummy server is running")
 setup_crypto_config()
 print("key exchange was successful")
 #any other code using send_encrypt() or recv_decrypt() should be sent after calling setup_crypto_config()
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, COMM_PORT))
+        s.listen()
+        conn, addr = s.accept()
+        with conn:
+            print(f"Connected by {addr}")
+            data = conn.recv(1024)
+            print(f"Received the following message: {data}")
+            print(f"Sending back a message")
+            #TODO: try to send more data, less data, and data in parts
+            conn.sendall(b"Hi TestApp!!")
+            print(f"Reply sent")
 
 
 

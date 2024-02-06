@@ -32,6 +32,7 @@ DeclareCAmkESComponent(
     SecureCommunication
     INCLUDES
         helpers
+        interfaces/headers
     SOURCES
         components/SecureCommunication/src/SecureCommunication.c
         helpers/sc_helpers.c
