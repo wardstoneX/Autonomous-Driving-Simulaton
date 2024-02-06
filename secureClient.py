@@ -53,11 +53,12 @@ def setup_crypto_config():
             iv = os.urandom(12)
 
             print("PRINTING DETAILS OF THE GENERATED AES KEY")
-            print(f"IV: {iv}")
             print(f"Key: {key}")
+            print(f"IV: {iv}")
 
-            #the TestApp is already expecting a 12 byte IV and 256 bit key, so we can send the IV concatenated with the key, without extra length tags
-            k_sym = iv + key
+
+            #the TestApp is already expecting a 256 bit key and 12 byte IV, so we can send the key concatenated with the IV, without extra length tags
+            k_sym = key + iv
             
             inner_cipher = SRK_pub.encrypt(
                 k_sym,

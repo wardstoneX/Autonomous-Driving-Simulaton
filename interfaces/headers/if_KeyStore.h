@@ -9,7 +9,7 @@
 struct if_KeyStore_Key {
   uint32_t keyLenByte;
   uint32_t ivLenByte;
-  char rawData[];
+  char* rawData;
 };
 
 typedef struct {

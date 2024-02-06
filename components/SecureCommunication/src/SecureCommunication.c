@@ -75,7 +75,7 @@ static OS_CryptoKey_Spec_t aes_spec = {
 
 
 
-static OS_CryptoKey_Attrib_t attr = {.flags = 0, .keepLocal = 1};
+//static OS_CryptoKey_Attrib_t attr = {.flags = 0, .keepLocal = 1};
 
 
 
@@ -89,6 +89,7 @@ static OS_Dataport_t cryptoPort = OS_DATAPORT_ASSIGN(crypto_dp);
 if_KeyStore_t keystore = IF_KEYSTORE_ASSIGN(keystore_rpc, keystore_dp);
 if_Crypto_t crypto = IF_CRYPTO_ASSIGN(crypto_rpc, crypto_dp);
 
+static uint32_t hStoredKey;
 
 
 
@@ -691,42 +692,29 @@ static OS_Error_t exchange_keys(void) {
     }
 
 
-    char iv[12];
-    char key_bytes[32];
-    
-    memmove(iv, OS_Dataport_getBuf(cryptoPort), 12);
-    memmove(key_bytes, OS_Dataport_getBuf(cryptoPort) + 12, 32);
+    char* Ksym_bytes = malloc(32+12);
+    memmove(Ksym_bytes, OS_Dataport_getBuf(cryptoPort), 32+12);
+
 
     Debug_LOG_INFO("PRINTING THE RECEIVED KEY DATA!!!!!!!!!!!!!!");
-    Debug_LOG_INFO("IV: %.12s", iv);
-    Debug_LOG_INFO("Key: %.32s", key_bytes);
-
-
-    Debug_LOG_INFO("Loading data into key object");
-    OS_CryptoKey_Data_t K_data = {0};
-
-    //  fields necessary for K_sym
-    //uint32_t len of the key (in bytes)
-    //uint8_t pointer to bytes of the key     
-
-    //we already know we'll get a AES256 key, so the length will be 256/8=32 bytes
-    K_data.type = OS_CryptoKey_TYPE_AES;
-    K_data.attribs = attr;
-    K_data.data.aes.len = 32;
-    memmove(K_data.data.aes.bytes, key_bytes, 32);
-
-
-    //TODO: 8.- store K_sym in the keystore
+    Debug_LOG_INFO("Key: %.32s", Ksym_bytes);
+    Debug_LOG_INFO("IV: %.12s", Ksym_bytes+32);
     
-    /*
-    if((ret = OS_Keystore_storeKey(hKeys, "symmetric key", &K_data, sizeof(K_data))) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Failed to store key data in the key store, err: %d", ret);
-    }
-    */
-    
+
+    //8.- store K_sym in the keystore
+    Debug_LOG_INFO("Loading data into key struct");
+    struct if_KeyStore_Key Ksym = {.keyLenByte = 32, .ivLenByte = 12, .rawData = Ksym_bytes};
+
+    memmove(OS_Dataport_getBuf(keystorePort), &Ksym, sizeof(Ksym));
+    hStoredKey = keystore.storeKey();
+    if(hStoredKey == -1) {
+        Debug_LOG_ERROR("The key could not be stored in the TPM!");
+        //TODO: find a better return value on error
+        return -1;
+    }    
 
     Debug_LOG_INFO("Key sucessfully exchanged");
-    return ret;
+    return OS_SUCCESS;
 }
 
 
