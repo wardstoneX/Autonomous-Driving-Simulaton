@@ -11,9 +11,11 @@
 
 #include "include/scv/scv.h"
 #include "include/scv/scv.c"
-#define PORT 6061
+
 #include <stdbool.h>
 
+
+#define PORT 6061
 struct ControlData {
     float throttle;
     float steer;

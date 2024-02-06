@@ -12,11 +12,35 @@
 #include <string.h>
 
 #include <camkes.h>
+
 #include <netinet/in.h>
 
 #include "scv.h"
 #include <stdlib.h>
 #include <tgmath.h>
+
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <tgmath.h>
+
+
+#include "include/scv/scv.h"
+#include "include/scv/scv.c"
+
+#include <stdbool.h>
+
+#define PORT 6061
+struct ControlData {
+    float throttle;
+    float steer;
+    float brake;
+    int reverse;
+    float time;
+};
 
 struct Tuple {
     float x;
@@ -24,24 +48,147 @@ struct Tuple {
     float z;
 };
 
+struct PairOfTuples {
+    struct Tuple mainVehiclePosition;
+    struct Tuple OtherVehiclePosition;
+};
 
+int sock = 0;
+struct PairOfTuples lastDetectedVehicle = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+struct Tuple midpoint;
+bool parkingSpotDetected = false;
 
 struct scv_vector *vector;
 
-struct scv_vector *vectors_radar;
-
+struct scv_vector *vector_radar;
 
 ssize_t leftover_size = 0;
 char leftover[1024];
-struct scv_vector *inner_vector = NULL;
+bool isZeroTuple(struct Tuple tuple) {
+    return tuple.x == 0.0 && tuple.y == 0.0; //&& tuple.z == 0.0;
+}
 
+float calculateEuclideanDistance(struct Tuple* tuple1, struct Tuple*tuple2) {
+    float dx = tuple2->x - tuple1->x;
+    float dy = tuple2->y - tuple1->y;
+    float dz = tuple2->z - tuple1->z;
+
+    return sqrt(dx * dx + dy * dy + dz * dz);
+}
+double predict_power(double x) {
+    // Use the parameters obtained from curve fitting
+    double a = 1.27038607;
+    double b = 0.77445365;
+
+    // Calculate y based on the power function
+    double y = a * pow(x, b);
+
+    return y;
+}
+struct Tuple calculateMidpoint(struct Tuple *point1, struct Tuple *point2) {
+    struct Tuple midpoint;
+    midpoint.x = (point1->x + point2->x) / 2;
+    midpoint.y = (point1->y + point2->y) / 2;
+    midpoint.z = (point1->z + point2->z) / 2;
+    return midpoint;
+}
+
+void send_control_data(int socket, struct ControlData data) {
+    // Serialize the struct into a byte stream
+    char buffer[sizeof(struct ControlData)];
+    memcpy(buffer, &data, sizeof(struct ControlData));
+
+    // Send the byte stream
+    send(socket, buffer, sizeof(buffer), 0);
+}
+void send_parameters(int sock, float throttle, float steer, float brake, int reverse, float time) {
+    struct ControlData data;
+    data.throttle = throttle;
+    data.steer = steer;
+    data.brake = brake;
+    data.reverse = reverse;
+    data.time = time;
+
+    send_control_data(sock, data);
+}
+
+void park() {
+    printf("Parking initiated\n");
+    // lane change
+    send_parameters(sock,0.4, 0.3, 0,0, 3.35);
+    send_parameters(sock,0.4, -0.3, 0,0, 1.65);
+    send_parameters(sock,0.0, 0.0, 1.0,0, 2);
+    double dist = lastDetectedVehicle.mainVehiclePosition.x - midpoint.x;
+    double time = predict_power(dist);
+    printf("Distance: %f, Time: %f\n", dist, time);
+    send_parameters(sock,0.4, 0.0, 0.0,1, time - 5.25);
+    // initiate the parking process
+    send_parameters(sock,0.0, 0.0, 1.0,0, 2);
+
+    send_parameters(sock,0.3, 0.6, 0.0,1, 3.75);
+
+    send_parameters(sock,0.2, -0.6, 0.0,1, 2.25);
+
+    send_parameters(sock,0.0, 0.0, 1.0,0, 5);
+
+
+
+}
+
+void checkForParking() {
+    uint16_t t = 0;
+    while(1) {
+        ssize_t size = vector->size;
+        ssize_t size_radar = vector_radar->size;
+        if (size == 0 || size_radar == 0) {
+            return;
+        }
+        struct Tuple *mainGNSSposition = (struct Tuple *) scv_front(vector);
+        struct Tuple *radarDetection = (struct Tuple *) scv_front(vector_radar);
+
+        //printf("radar detection:  (%f, %f, %f)\n", radarDetection->x, radarDetection->y, radarDetection->z);
+
+        scv_pop_front(vector);
+        scv_pop_front(vector_radar);
+
+        if (isZeroTuple(*radarDetection)) {
+            continue;
+        }
+
+        if (isZeroTuple(lastDetectedVehicle.mainVehiclePosition) && isZeroTuple(lastDetectedVehicle.OtherVehiclePosition)) {
+            lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
+            lastDetectedVehicle.mainVehiclePosition = *mainGNSSposition;
+            printf("main vehicle at position (%f, %f, %f) detected other vehicle at position (%f, %f, %f)\n",mainGNSSposition->x, mainGNSSposition->y, mainGNSSposition->z, radarDetection->x, radarDetection->y, radarDetection->z);
+            continue;
+        }
+
+        float distance = calculateEuclideanDistance(&lastDetectedVehicle.OtherVehiclePosition, radarDetection);
+        //printf("Distance: %f\n", distance);
+        if (distance > 4.0) {
+            if (distance > 12) {
+                printf("Park spot found\n");
+                send_parameters(sock, 0.0, 0.0, 1.0, 0, 3);
+
+                // calculate the middle point of two detections here
+                midpoint = calculateMidpoint(&lastDetectedVehicle.mainVehiclePosition, &lastDetectedVehicle.OtherVehiclePosition);
+                printf("Midpoint: (%f, %f, %f)\n", midpoint.x, midpoint.y, midpoint.z);
+                parkingSpotDetected = true;
+                lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
+                lastDetectedVehicle.mainVehiclePosition = *mainGNSSposition;
+                return;
+            }
+            lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
+            lastDetectedVehicle.mainVehiclePosition = *mainGNSSposition;
+            printf("New vehicle detected!!!!!!! main vehicle at position (%f, %f, %f) detected other vehicle at position (%f, %f, %f)\n",mainGNSSposition->x, mainGNSSposition->y, mainGNSSposition->z, radarDetection->x, radarDetection->y, radarDetection->z);
+
+            continue;
+        }
+
+    }
+}
 
 
 void process_buffer(char* buffer, ssize_t size) {
-
-
-
-				
     int start = 0;
     while (start < size) {
         // Check if there's enough data to parse the header
@@ -61,63 +208,45 @@ void process_buffer(char* buffer, ssize_t size) {
                 break; // Wait for the rest of the message to arrive
             }
 
-            // Parse the data
-            struct Tuple tuple;
-            
-            sscanf(buffer + start + 5, "%f,%f,%f", &tuple.x, &tuple.y, &tuple.z);
-            //Debug_LOG_INFO("Tuple: (%f, %f, %f)\n",  tuple.x, tuple.y, tuple.z);
-
-            scv_push_back(vector, &tuple);
-            
-
-            start += 5 + data_size; // Move to the start of the next message
-        } else if(buffer[start] == '\x14') {
-			int data_size;
-            memcpy(&data_size, buffer + start + 1, sizeof(int));
-            data_size = ntohl(data_size); // Convert from network to host byte order
-
-			 // Check if the complete message has been received
-            if (start + 5 + data_size > size) {
+            // Check for the end of the data pair
+            if (buffer[start + 5 + data_size] != '\x14') {
+                fprintf(stderr, "Error: Expected '\\x14' at the end of the data pair, but found '\\x%x'\n", buffer[start + 5 + data_size]);
                 break; // Wait for the rest of the message to arrive
             }
 
-            // Parse the data
-            struct Tuple tuple;
-            sscanf(buffer + start + 5, "%f,%f,%f",&tuple.x, &tuple.y, &tuple.z);
+            char* data = malloc(data_size + 1);
+            memcpy(data, buffer + start + 5, data_size);
+            data[data_size] = '\0'; // Null-terminate the string
 
-            //Debug_LOG_INFO("Tuple: (%f, %f, %f)\n",  tuple.x, tuple.y, tuple.z);
+            struct Tuple radar, gnss;
+            sscanf(data, "%f,%f,%f-%f,%f,%f", &radar.x, &radar.y, &radar.z, &gnss.x, &gnss.y, &gnss.z);
+            //printf(" GNSS: (%f, %f, %f)\n", gnss.x, gnss.y, gnss.z);
 
-            if(inner_vector == NULL) {
-                inner_vector = scv_new(sizeof(struct Tuple), 10);
-            }
+            scv_push_back(vector_radar, &radar);
+            scv_push_back(vector, &gnss);
 
-            //printf("Quadruple: distance = %f, x = %f, y = %f, z = %f\n", quadruple.distance, quadruple.x, quadruple.y, quadruple.z);
+            start += 5 + data_size + 1; // Move to the start of the next message
 
-            scv_push_back(inner_vector, &tuple);
-
-            start += 5 + data_size; 
-		} else if(buffer[start] == '\x15') {
-            // End of batch, prepare for the next one
-            scv_push_back(vectors_radar, &inner_vector);
-
-
-            inner_vector = NULL;
-            start++;
+            free(data);
         } else {
             // Handle other types of data
             start++;
         }
     }
 
-     if (start < size) {
-        memmove(leftover, buffer + start, size - start);
+    if(!parkingSpotDetected)
+        checkForParking();
+
+
+
+    // Update the leftover data
+    if (start < size) {
+        memmove(buffer, buffer + start, size - start);
         leftover_size = size - start; // Update the size of the leftover data
     } else {
         leftover_size = 0; // No leftover data
     }
 }
-
-
 
 
 
@@ -137,7 +266,7 @@ waitForNetworkStackInit(
 
     for (;;)
     {
-       networkStackState = OS_Socket_getStatus(ctx);
+        networkStackState = OS_Socket_getStatus(ctx);
         if (networkStackState == RUNNING)
         {
             // NetworkStack up and running.
@@ -263,13 +392,15 @@ waitForConnectionEstablished(
 int run()
 {
     Debug_LOG_INFO("Starting test_app_server...");
-    vector = scv_new(sizeof(struct Tuple), 10);
-	vectors_radar = scv_new(sizeof(struct scv_vector*), 10);
+
+    // dont forget to clean the vectors at the end
+    vector = scv_new(sizeof(struct Tuple), 1000);
+    vector_radar = scv_new(sizeof(struct Tuple), 1000);
+    
+    
 
     // Check and wait until the NetworkStack component is up and running.
     OS_Error_t ret = waitForNetworkStackInit(&networkStackCtx);
-    Debug_LOG_INFO("network stack is initialized...");
-
     if (OS_SUCCESS != ret)
     {
         Debug_LOG_ERROR("waitForNetworkStackInit() failed with: %d", ret);
@@ -282,8 +413,6 @@ int run()
               &hSocket,
               OS_AF_INET,
               OS_SOCK_STREAM);
-       Debug_LOG_INFO("socket is created...");
-          
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("OS_Socket_create() failed, code %d", ret);
@@ -297,8 +426,6 @@ int run()
     };
 
     ret = OS_Socket_connect(hSocket, &dstAddr);
-        Debug_LOG_INFO("socket is connected...");
-
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("OS_Socket_connect() failed, code %d", ret);
@@ -307,8 +434,6 @@ int run()
     }
 
     ret = waitForConnectionEstablished(hSocket.handleID);
-        Debug_LOG_INFO("connection is established...");
-
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("waitForConnectionEstablished() failed, error %d", ret);
@@ -316,65 +441,43 @@ int run()
         return -1;
     }
 
-    
+    send_parameters(new_socket, 0.2, 0.0, 0.0, 0,0);
 
+    while (read > 0 || ret == OS_ERROR_TRY_AGAIN) {
 
-    Debug_LOG_INFO("HTTP request successfully sent");
-
-    char buffer[OS_DATAPORT_DEFAULT_SIZE];
-   
-    size_t read = 0;
-  
-	
-
-  
-   
-
-    do {
-        seL4_Yield();
-        ret = OS_Socket_read(hSocket, buffer, sizeof(buffer)-1, &read);
-
-        //Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
-        
-
-
-       if( read > 0) {
-            Debug_LOG_INFO("Bytes read: %d", read);
-           
-
-
-            char temp[sizeof(buffer) + leftover_size];
-			if (leftover_size > 0) {
-				memcpy(temp, leftover, leftover_size);
-				memcpy(temp + leftover_size, buffer, read);
-			} else {
-				memcpy(temp, buffer, read);
-			}
-			process_buffer(temp, read + leftover_size);
-            
-       }
-
-
-    } while (read > 0 || ret == OS_ERROR_TRY_AGAIN);
-    
-
-            Debug_LOG_INFO("printign vectors..");
-
-     for (size_t i = 0; i < vector->size; ++i) {
-        struct Tuple *tuple = scv_at(vector, i);
-        Debug_LOG_INFO("Tuple %zu: (%f, %f, %f)\n", i, tuple->x, tuple->y, tuple->z);
-    }
-
-    for (size_t i = 0; i < vectors_radar->size; ++i) {
-        struct scv_vector *inner_vector = scv_at(vectors_radar, i);
-    
-        Debug_LOG_INFO("Inner vector %zu: ", i);
-        for (size_t j = 0; j < inner_vector->size; ++j) {
-            struct Tuple *tuple = scv_at(inner_vector, j);
-        Debug_LOG_INFO("Tuple %zu: (%f, %f, %f)\n", j, tuple->x, tuple->y, tuple->z);
+        // break out if we detected parking spot
+        if(parkingSpotDetected) {
+            break;
         }
-        Debug_LOG_INFO("\n");
+
+        valread = read(new_socket, buffer, sizeof(buffer) - 1);
+        if (valread < 0) {
+            perror("read");
+            break;
+        } else if (valread == 0) {
+            printf("Client disconnected\n");
+            break;
+        } else {
+            char temp[sizeof(buffer) + leftover_size];
+            if (leftover_size > 0) {
+                memcpy(temp, leftover, leftover_size);
+                memcpy(temp + leftover_size, buffer, valread);
+            } else {
+                memcpy(temp, buffer, valread);
+            }
+            process_buffer(temp, valread + leftover_size);
+
+        }
     }
+    printf("end reading\n");
+
+    // initiating the parking process
+
+    park();
+
+
+    /// there is endloss loop here
+    while(1);
 
 
     OS_Socket_close(hSocket);
