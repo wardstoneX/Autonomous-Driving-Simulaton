@@ -19,7 +19,8 @@ def send_to_server(connection_socket,data1, data2):
         packed_size = struct.pack('>i', len(encoded_data))
         data_to_send = b"\x13" + packed_size + encoded_data + b"\x14"
         data_str += data_to_send
-
+        
+    # !!! call send_encrypt here !!! #
     connection_socket.sendall(data_str)
 
 

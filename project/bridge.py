@@ -15,10 +15,25 @@ host_simulator = args.host_simulator
 port_simulator = args.port_simulator
 map = args.map
 
+
+import socket
+
+def start_server(host, port):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen(1)
+    print(f"Server listening on {host}:{port}")
+    client_socket, client_address = server_socket.accept()
+    return client_socket
+
 try:
+    # !!! call setup_crypto_config here !!! #
     gnss_handler = GNSSHandler()
     radar_handler = RadarHandler()
-    connection_socket = connect_to_server(HOST,PORT)
+    
+    #connection_socket = connect_to_server(HOST,PORT)
+    connection_socket = start_server(HOST,PORT)
+    
     data_sender = DataSender(connection_socket, gnss_handler, radar_handler)
     receiver = ControlDataReceiver(connection_socket)
 

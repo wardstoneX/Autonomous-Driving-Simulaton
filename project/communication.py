@@ -27,6 +27,7 @@ class ControlDataReceiver(threading.Thread):
 
     def run(self):
         while not self.stop_event.is_set():
+            # !!! call recv_decrypt here !!! #
             data = self.connection_socket.recv(1024)
             data = self.leftover_data + data
             self.leftover_data = b''
