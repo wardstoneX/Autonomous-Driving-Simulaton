@@ -691,27 +691,29 @@ static OS_Error_t exchange_keys(void) {
         Debug_LOG_WARNING("Something might have gone wrong, received %d bytes instead of %d", len, 12+32);
     }
 
-
-    char* Ksym_bytes = malloc(32+12);
+    //following block is for debug purposes
+    char* Ksym_bytes[32+12];
     memmove(Ksym_bytes, OS_Dataport_getBuf(cryptoPort), 32+12);
-
-
     Debug_LOG_INFO("PRINTING THE RECEIVED KEY DATA!!!!!!!!!!!!!!");
     Debug_LOG_INFO("Key: %.32s", Ksym_bytes);
     Debug_LOG_INFO("IV: %.12s", Ksym_bytes+32);
+    /*debug ends here*/
+
+     
+    
+
+
     
 
     //8.- store K_sym in the keystore
-    Debug_LOG_INFO("Loading data into key struct");
-    struct if_KeyStore_Key Ksym = {.keyLenByte = 32, .ivLenByte = 12, .rawData = Ksym_bytes};
-
-    memmove(OS_Dataport_getBuf(keystorePort), &Ksym, sizeof(Ksym));
-    hStoredKey = keystore.storeKey();
+    memmove(OS_Dataport_getBuf(keystorePort), OS_Dataport_getBuf(cryptoPort), 32 + 12);
+    hStoredKey = keystore.storeKey(32, 12);
     if(hStoredKey == -1) {
         Debug_LOG_ERROR("The key could not be stored in the TPM!");
         //TODO: find a better return value on error
         return -1;
-    }    
+    }  
+     
 
     Debug_LOG_INFO("Key sucessfully exchanged");
     return OS_SUCCESS;
