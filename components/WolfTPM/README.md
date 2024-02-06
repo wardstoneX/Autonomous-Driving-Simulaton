@@ -25,7 +25,7 @@ There is a pin header provided to help positioning. It is used like this:
 
 ### Changes to config.txt
 
-The following line **must** be added to `config.txt`:
+The following line **must** be added to `sdk/rpi3_sd_card/config.txt`:
 
 ```text
 enable_jtag_gpio=0
@@ -107,6 +107,13 @@ in the CMake file:
 ```cmake
 CAmkESAddCPPInclude(interfaces/camkes)
 CAmkESAddImportPath(interfaces/camkes)
+```
+
+Any component that uses the interfaces must also add the interface headers directory to its `INCLUDES`:
+
+```cmake
+    INCLUDES
+        interfaces/headers
 ```
 
 ### C Source Files
