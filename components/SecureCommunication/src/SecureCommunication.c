@@ -51,7 +51,7 @@ static OS_CryptoKey_Spec_t aes_spec = {
 static OS_Crypto_Handle_t hCrypto;
 
 
-
+if_OS_Entropy_t entropy = IF_OS_ENTROPY_ASSIGN(entropy_rpc, entropy_dp);
 if_KeyStore_t keystore = IF_KEYSTORE_ASSIGN(keystore_rpc, keystore_dp);
 if_Crypto_t crypto = IF_CRYPTO_ASSIGN(crypto_rpc, crypto_dp);
 
@@ -208,63 +208,38 @@ secureCommunication_rpc_socket_write(
 {
     OS_Error_t ret;
     CHECK_IS_RUNNING(OS_Socket_getStatus(&networkStackCtx));
-
-
-    uint8_t *buf = secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id());
     OS_Socket_Handle_t apiHandle = {.ctx = networkStackCtx, .handleID = handle};
 
-    /*
-    OS_CryptoCipher_Handle_t hCipher;
+    uint8_t* plaintext = malloc(*pLen);
+    memcpy(plaintext, secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), *pLen);
 
-    uint8_t enc_text[OS_DATAPORT_DEFAULT_SIZE];
-    size_t enc_text_size = sizeof(enc_text);
-
-
-    
-    OS_CryptoKey_Data_t key_data;
-    size_t key_size;
-    OS_CryptoKey_Handle_t hKey;
-    if((ret = OS_Keystore_loadKey(hKeys, "symmetric key", &key_data, &key_size)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Failed to retrieve key from keystore, err: %d", ret);
+    uint8_t* K_sym = malloc(32);
+    uint32_t keyLen = 32;
+    if(keystore.loadKey(hStoredKey, &keyLen) != 0 || keyLen != 32) {
+        Debug_LOG_ERROR("There was an error when loading the symmetric key for encryption");
+        return -1;
     }
-    if((ret = OS_CryptoKey_import(&hKey, hCrypto, &key_data)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Failed to import data into key object, err: %d", ret);
+    memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
+
+    uint8_t* iv = malloc(12);
+    if(12 != entropy.read(12)){
+        Debug_LOG_ERROR("There was an error when generating the IV for encryption");
+        return -1;
+    }
+    memcpy(iv, OS_Dataport_getBuf(entropy.dataport), 12);
+
+    uint8_t payload[OS_DATAPORT_DEFAULT_SIZE];
+    if(encrypt_AES_GCM(hCrypto, K_sym, plaintext, *pLen, iv, payload, sizeof(payload)) != 0) {
+        Debug_LOG_ERROR("There was an error when encrypting the message");
+        return -1;
     }
 
-
-
-    printf("Encrypting String.\n");
-
-    // Create a cipher object to encrypt data with AES-GCM (does require an IV!)
-    OS_CryptoCipher_init(&hCipher,
-                        hCrypto,
-                        hKey,
-                        OS_CryptoCipher_ALG_AES_GCM_ENC,
-                        iv,
-                        iv_size);
-
-    // Start computation for the AES-GCM
-    OS_CryptoCipher_start(hCipher, NULL, 0);
-
-    // Encrypt received String
-    OS_CryptoCipher_process(hCipher, buf, *pLen, enc_text, &enc_text_size);
-
-    printf("%d of %ls bytes encrypted successfully.", enc_text_size, pLen);
-    printf("Encrypted Text %s.\n", enc_text);
-    
 
     size_t sentLength;
-    ret = OS_Socket_write(apiHandle, enc_text, enc_text_size, &sentLength);
+    ret = OS_Socket_write(apiHandle, payload, 12 + *pLen, &sentLength);
     
-
-    printf("%d of %d bytes sent succesfully.", sentLength, enc_text_size);
-    memmove(pLen, &sentLength, sizeof(*pLen));
-    */
-    size_t sentLength;
-    ret = OS_Socket_write(apiHandle, buf, *pLen, &sentLength);
-    
-
     printf("%d of %d bytes sent succesfully.", sentLength, *pLen);
+    sentLength -= 12;
     memmove(pLen, &sentLength, sizeof(*pLen));
 
     return ret;
@@ -648,11 +623,8 @@ static OS_Error_t exchange_keys(void) {
 
 
     //8.- store K_sym in the keystore
-    //TODO: remove dummy IV
-    uint8_t dummyIV[12] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12};
     memmove(OS_Dataport_getBuf(keystore.dataport), OS_Dataport_getBuf(crypto.dataport), 32);
-    memmove(OS_Dataport_getBuf(keystore.dataport), dummyIV, 12);
-    hStoredKey = keystore.storeKey(32, 12);
+    hStoredKey = keystore.storeKey(32);
     if(hStoredKey == -1) {
         Debug_LOG_ERROR("The key could not be stored in the TPM!");
         return -1;
