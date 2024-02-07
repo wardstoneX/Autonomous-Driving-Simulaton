@@ -1,7 +1,7 @@
 import socket
 from Crypto import Hash, Random
 from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP, AES
+from Crypto.Cipher import PKCS1_OAEP, AES, PKCS1_v1_5
 
 HOST = "10.0.0.10"      #arbitrary, make sure to configure on the computer when running the python client
 CRYPTO_PORT = 65432     #arbitrary, add later to system_config.h
@@ -26,7 +26,6 @@ def setup_crypto_config():
             EK_nLen = int.from_bytes(data[4:8], "little")
             EK_n = int.from_bytes(data[8:8+EK_nLen], "big")
             EK = RSA.construct((EK_n, EK_exp))
-
             SRK_exp = int.from_bytes(data[8+EK_nLen:12+EK_nLen], "little")
             SRK_nLen = int.from_bytes(data[12+EK_nLen:16+EK_nLen], "little")
             SRK_n = int.from_bytes(data[16+EK_nLen:16+EK_nLen+SRK_nLen], "big")
@@ -36,14 +35,18 @@ def setup_crypto_config():
 
             #5.- generate K_sym and encrypt: ciphertext = encrypt(EK_pub, encrypt(SRK_pub, K_sym))
             global K_sym
-            K_sym = Random.get_random_bytes(32)
+#            K_sym = Random.get_random_bytes(32)
+            K_sym = bytes([ i for i in range(0,32)])
 
             print(f"Generated key: {K_sym}")
 
-            cipher_EK = PKCS1_OAEP.new(EK)
-            cipher_SRK = PKCS1_OAEP.new(SRK)
+            #cipher_EK = PKCS1_OAEP.new(EK)
+            #cipher_SRK = PKCS1_OAEP.new(SRK)
+            cipher_EK = PKCS1_v1_5.new(EK)
+            cipher_SRK = PKCS1_v1_5.new(SRK)
             ciphertext = cipher_EK.encrypt(cipher_SRK.encrypt(K_sym))
-            print(f"Encrypted key: {ciphertext}")
+            #ciphertext = cipher_SRK.encrypt(K_sym)
+            print(f"Encrypted key: {ciphertext.hex()}")
 
             #6.- send ciphertext to app
             conn.sendall(ciphertext)

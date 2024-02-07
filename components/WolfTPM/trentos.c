@@ -245,7 +245,6 @@ int keystore_rpc_loadKey(uint32_t hdl, uint32_t *keyLen, uint32_t *ivLen) {
  */
 int crypto_rpc_decrypt_RSA_OAEP(int key, int *len) {
   WOLFTPM2_KEY *pKey = getKey(key);
-  Debug_LOG_DEBUG("Reach");
 
   /* Note: Looking at wolfTPM2_RsaDecrypt source code, it appears that they
    * copy the ciphertext into an internal buffer, perform operations on that,
@@ -253,7 +252,7 @@ int crypto_rpc_decrypt_RSA_OAEP(int key, int *len) {
    * So it shouldn't be a problem that input and output pointer are the same.
    */
   CHKRCI(
-      wolfTPM2_RsaDecrypt(&dev, pKey, TPM_ALG_OAEP,
+      wolfTPM2_RsaDecrypt(&dev, pKey, TPM_ALG_RSAES,
 	                  OS_Dataport_getBuf(cryptoPort), *len,
 			  OS_Dataport_getBuf(cryptoPort), len),
       1);

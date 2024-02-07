@@ -173,7 +173,7 @@ secureCommunication_rpc_socket_connect(
 
     //in difference to OS_Socket_connect, this function will only return after the notification of successfull connection has been received
     Debug_LOG_INFO("Waiting for connection");
-    ret = waitForConnectionEstablished(apiHandle.handleID, &networkStackCtx);
+    ret = waitForConnectionEstablished(apiHandle.handleID);
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("waitForConnectionEstablished() failed, error %d", ret);
@@ -553,7 +553,7 @@ static OS_Error_t exchange_keys(void) {
     }
     Debug_LOG_INFO("returned from connect call!");
 
-    ret = waitForConnectionEstablished(hSocket.handleID, &networkStackCtx);
+    ret = waitForConnectionEstablished(hSocket.handleID);
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("waitForConnectionEstablished() failed, error %d", ret);
@@ -627,6 +627,8 @@ static OS_Error_t exchange_keys(void) {
     Debug_LOG_INFO("Received %d bytes as a response", position - buffer);
     char ciphertext[position - buffer];
     memmove(ciphertext, buffer, sizeof(ciphertext));
+    Debug_LOG_INFO("DUMPING RECEIVED CIPHERTEXT");
+    Debug_DUMP_INFO(ciphertext, sizeof(ciphertext));
 
     //7.- decrypt the ciphertext to get K_sym
     Debug_LOG_INFO("Decrypting...\n len of cyphertext is %d", sizeof(ciphertext));
@@ -689,8 +691,7 @@ waitForNetworkStackInit(
 
 static OS_Error_t
 waitForConnectionEstablished(
-    const int handleId,
-    const if_OS_Socket_t* const ctx)
+    const int handleId)
 {
     OS_Error_t ret;
 
@@ -698,7 +699,9 @@ waitForConnectionEstablished(
     // established.
     for (;;)
     {
-        ret = OS_Socket_wait(ctx);
+        Debug_LOG_INFO("BEFORE CALLING WAIT");
+        ret = OS_Socket_wait(&networkStackCtx);
+        Debug_LOG_INFO("AFTER CALLING WAIT");
         if (ret != OS_SUCCESS)
         {
             Debug_LOG_ERROR("OS_Socket_wait() failed, code %d", ret);
@@ -710,7 +713,7 @@ waitForConnectionEstablished(
         int numberOfSocketsWithEvents;
 
         ret = OS_Socket_getPendingEvents(
-                  ctx,
+                  &networkStackCtx,
                   evtBuffer,
                   evtBufferSize,
                   &numberOfSocketsWithEvents);
