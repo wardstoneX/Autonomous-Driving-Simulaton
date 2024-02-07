@@ -36,6 +36,7 @@
 #define FILESYSTEM_1_STORAGE_OFFSET     0
 #define FILESYSTEM_1_STORAGE_SIZE       (1024*32)
 #define FILESYSTEM_2_STORAGE_OFFSET     (1024*32)
+
 #define FILESYSTEM_2_STORAGE_SIZE       (1024*32)
 
 
@@ -44,11 +45,11 @@
 //-----------------------------------------------------------------------------
 #define OS_NETWORK_MAXIMUM_SOCKET_NO 1
 
-#define CFG_TEST_HTTP_SERVER      "10.0.0.10"
+#define SERVER_IP                 "10.0.0.10"
 #define ETH_ADDR                  "10.0.0.11"
 #define ETH_GATEWAY_ADDR          "10.0.0.1"
 #define ETH_SUBNET_MASK           "255.255.255.0"
-#define EXERCISE_CLIENT_PORT      8080
+#define SERVER_PORT               6000
 
 
 //-----------------------------------------------------------------------------

@@ -1,27 +1,10 @@
 
-from collections import namedtuple
-import struct
+
 import numpy as np
+import threading
+import math
 
-def send_to_server(connection_socket,data1, data2):
-    data_str = b""
-
-    for i in range(len(data1)):
-        radar = data1[i]
-        gnss = data2[i]
-        # if data1[i] != (0,0,0):
-        # radar = radar_measurement_to_cartesian(gnss, radar)
-
-        combined_data = f"{radar}-{gnss}"
-        combined_data = combined_data.replace('(', '').replace(')', '')
-
-        encoded_data = combined_data.encode('utf-8')
-        packed_size = struct.pack('>i', len(encoded_data))
-        data_to_send = b"\x13" + packed_size + encoded_data + b"\x14"
-        data_str += data_to_send
-        
-    # !!! call send_encrypt here !!! #
-    connection_socket.sendall(data_str)
+import carla            
 
 
 # The (modified) method is taken from this repository:
@@ -65,8 +48,7 @@ def radar_measurement_to_cartesian(radar_position, detection_tuple):
 
     return (x, y, z)
 
-import threading
-import math
+
 
 class GNSSHandler:
     def __init__(self):
@@ -75,24 +57,23 @@ class GNSSHandler:
 
 
     def gnss_callback(self, data):
+
         coordinates = convert_gps_to_carla(data)
         with self.gnss_data_lock:
             self.gnss_data_points.append(coordinates)
             
             
-from bridge import get_world
-import carla            
+
 
 class RadarHandler:
     def __init__(self):
         self.radar_data_points = [] 
         self.radar_data_lock = threading.Lock()
-        
-            
+     
     def radar_callback(self, radar_data):
         list = []
         current_rot = radar_data.transform.rotation
-        world = get_world()
+        #world = get_world()
         
         for detect in radar_data:
             azi = math.degrees(detect.azimuth)
@@ -108,20 +89,20 @@ class RadarHandler:
 
             location_ = radar_data.transform.location + fw_vec
 
-            world.debug.draw_point(
-                radar_data.transform.location + fw_vec,
-                size=0.075,
-                life_time=0.06,
-                persistent_lines=False,
-                color=carla.Color(0, 0, 0))
+           # world.debug.draw_point(
+               # radar_data.transform.location + fw_vec,
+             #   size=0.075,
+             #   life_time=0.06,
+               # persistent_lines=False,
+               # color=carla.Color(0, 0, 0))
             
             list.append((location_.x, location_.y, location_.z))
 
         list = list[0] if list else (0, 0, 0)
-
+        #print(list)
         with self.radar_data_lock:
             self.radar_data_points.append(list)
+            #print(list)
                 
                 
-ControlData = namedtuple('ControlData', 'throttle steer brake reverse time')
                

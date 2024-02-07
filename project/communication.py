@@ -2,12 +2,39 @@ import queue
 import threading
 import struct
 import socket
-from utils import ControlData, send_to_server
 import time
+from collections import namedtuple
+import struct
 
-MAX_DATA_POINTS = 20
-SEND_INTERVAL = 0.5 ## what the fuck is this
 
+ControlData = namedtuple('ControlData', 'throttle steer brake reverse time')
+      
+
+def send_to_server(connection_socket,data1, data2):
+    data_str = b""
+
+    for i in range(len(data1)):
+        radar = data1[i]
+        gnss = data2[i]
+        # if data1[i] != (0,0,0):
+        # radar = radar_measurement_to_cartesian(gnss, radar)
+
+        combined_data = f"{radar}-{gnss}"
+        combined_data = combined_data.replace('(', '').replace(')', '')
+
+        encoded_data = combined_data.encode('utf-8')
+        packed_size = struct.pack('>i', len(encoded_data))
+        data_to_send = b"\x13" + packed_size + encoded_data + b"\x14"
+        data_str += data_to_send
+        
+    # !!! call send_encrypt here !!! #
+    #print(f"Sending {len(data_str)} data  to server.")
+    try:
+        connection_socket.sendall(data_str)     
+    except BrokenPipeError:
+        print("Client disconnected, stopping threads.")
+        pass
+        
 def connect_to_server(host, port):
     connection_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     connection_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -24,6 +51,7 @@ class ControlDataReceiver(threading.Thread):
         self.tuple_size = struct.calcsize(self.format)
         self.leftover_data = b''
         self.stop_event = threading.Event()
+        
 
     def run(self):
         while not self.stop_event.is_set():
@@ -40,6 +68,8 @@ class ControlDataReceiver(threading.Thread):
                 control_data = ControlData(*control_data)
                 self.control_data_queue.put(control_data)
                 
+
+                
             if data:
                 self.leftover_data = data
    
@@ -48,7 +78,8 @@ class ControlDataReceiver(threading.Thread):
         if self.is_alive():
             self.join()
             
-            
+MAX_DATA_POINTS = 20
+SEND_INTERVAL = 1
 class DataSender(threading.Thread):
     def __init__(self,connection_socket, gnss_handler, radar_handler):
         super().__init__()
@@ -60,25 +91,27 @@ class DataSender(threading.Thread):
 
     def send_accumulated_data(self):
         with self.radar_handler.radar_data_lock, self.gnss_handler.gnss_data_lock:
-            
-            data1_chunk = self.radar_handler.radar_data_points[:MAX_DATA_POINTS]
-            radar_data = self.radar_handler.radar_data_points[MAX_DATA_POINTS:]
-
-            data2_chunk = self.gnss_handler.gnss_data_points[:MAX_DATA_POINTS]
-            gnss_data = self.gnss_handler.gnss_data_points[MAX_DATA_POINTS:]
+            #print(self.radar_handler.radar_data_points)
 
             # Check if both data1_chunk and data2_chunk are full
-            if data1_chunk and data2_chunk and len(data1_chunk) == len(data2_chunk):
-                send_to_server(data1_chunk, data2_chunk)
-            else:
-                # If either chunk is empty, restore the data points lists
-                self.radar_handler.radar_data_points = data1_chunk + radar_data
-                self.gnss_handler.gnss_data_points = data2_chunk + gnss_data
+            #print(len(self.radar_handler.radar_data_points), len(self.gnss_handler.gnss_data_points))
+            if len(self.radar_handler.radar_data_points) >= MAX_DATA_POINTS and len(self.gnss_handler.gnss_data_points) >= MAX_DATA_POINTS:
+                data1_chunk = self.radar_handler.radar_data_points[:MAX_DATA_POINTS]
+                data2_chunk = self.gnss_handler.gnss_data_points[:MAX_DATA_POINTS]
+                
+                self.radar_handler.radar_data_points = self.radar_handler.radar_data_points[MAX_DATA_POINTS:]
+                self.gnss_handler.gnss_data_points = self.gnss_handler.gnss_data_points[MAX_DATA_POINTS:]
+                
+                #print(data1_chunk)
+                send_to_server(self.connection_socket, data1_chunk, data2_chunk)
+                
+
 
     def run(self):
+        print("DataSender thread started.")
         while not self.stop_event.is_set():
-            self.send_accumulated_data()
             time.sleep(SEND_INTERVAL)
+            self.send_accumulated_data()
 
     
 
@@ -86,3 +119,7 @@ class DataSender(threading.Thread):
         self.stop_event.set()
         if self.is_alive():
             self.join()          
+            
+            
+
+            

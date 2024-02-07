@@ -24,15 +24,19 @@ class ScenarioSetup():
         self.gnss_handler = gnss_handler
         self.radar_handler = radar_handler
         self.main_vehicle = None
+        self.sensors = []
+        self.vehicles = []
+    
+      
        
 
     def get_world(self):
         return self.world
     
     def clean_up(self):
-        for actor in self.world.get_actors().filter('*vehicle*'):
+        for actor in self.sensors:
             actor.destroy()
-        for actor in self.world.get_actors().filter('*sensor*'):
+        for actor in self.vehicles:
             actor.destroy()
     
     def change_map(self, map_name):
@@ -41,9 +45,10 @@ class ScenarioSetup():
         
         if (self.map_name != 'Town06'):
             print(f"The loaded map is {map_name}.\n Loading Town06...")
+            self.client.set_timeout(30)
             self.client.load_world('TOWN06')
-            time.sleep(30)
-            self.client.set_timeout(5.0)
+            time.sleep(5)
+            
         else:
             print("The loaded map is Town06.")
             time.sleep(5)
@@ -62,8 +67,13 @@ class ScenarioSetup():
         radar_transform = carla.Transform(carla.Location(x=2, z=2), carla.Rotation(pitch=5, yaw=90, roll=0))
         radar = self.world.spawn_actor(radar_blueprint, radar_transform, attach_to=self.main_vehicle)
 
+        self.sensors.append(gnss_sensor)
+        self.sensors.append(radar)
+        
         radar.listen(lambda data: self.radar_handler.radar_callback(data))
         gnss_sensor.listen(lambda data: self.gnss_handler.gnss_callback(data))   
+        
+        print( "Sensors have been set up.")
              
     def setup_vehicles(self):
 
@@ -81,6 +91,7 @@ class ScenarioSetup():
             carla.Rotation(pitch=self.PITCH, yaw=self.YAW, roll=self.ROLL)
             )
             vehicle = self.world.spawn_actor(self.vehicle_blueprint, transform)
+            self.vehicles.append(vehicle)
         print("Vehicles on the side have been set up.")    
         
         print("Setting main vehicle...")
@@ -88,10 +99,12 @@ class ScenarioSetup():
         main_transform = carla.Transform(carla.Location(x=self.X_POSITION - 6, y=self.Y2_POSITION, z=self.Z_POSITION),
                                 carla.Rotation(pitch=self.PITCH, yaw=self.YAW, roll=self.ROLL))
         
-        main_vehicle = self.world.spawn_actor(self.blueprint_library, main_transform)
+        main_vehicle = self.world.spawn_actor(self.vehicle_blueprint, main_transform)
+        
+        self.vehicles.append(main_vehicle)
         
         self.main_vehicle = main_vehicle
         
         print("Main vehicle has been set up.")
-        print(f"The length of the vehicle is {main_vehicle.bounding_box.extent.x * 2}.")
-        print(f"The width of the vehicle is {main_vehicle.bounding_box.extent.y * 2}.")
+        #print(f"The length of the vehicle is {main_vehicle.bounding_box.extent.x * 2}.")
+        #print(f"The width of the vehicle is {main_vehicle.bounding_box.extent.y * 2}.")

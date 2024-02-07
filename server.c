@@ -7,15 +7,16 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <tgmath.h>
-
+#include <arpa/inet.h>
 
 #include "include/scv/scv.h"
 #include "include/scv/scv.c"
 
 #include <stdbool.h>
 
+#define SERVER_IP "127.0.0.1"
+#define SERVER_PORT 6000
 
-#define PORT 6061
 struct ControlData {
     float throttle;
     float steer;
@@ -145,7 +146,7 @@ void checkForParking() {
         }
 
         float distance = calculateEuclideanDistance(&lastDetectedVehicle.OtherVehiclePosition, radarDetection);
-        //printf("Distance: %f\n", distance);
+        printf("Distance: %f\n", distance);
         if (distance > 4.0) {
             if (distance > 12) {
                 printf("Park spot found\n");
@@ -202,7 +203,7 @@ void process_buffer(char* buffer, ssize_t size) {
 
             struct Tuple radar, gnss;
             sscanf(data, "%f,%f,%f-%f,%f,%f", &radar.x, &radar.y, &radar.z, &gnss.x, &gnss.y, &gnss.z);
-            //printf(" GNSS: (%f, %f, %f)\n", gnss.x, gnss.y, gnss.z);
+            //printf(" Radar: (%f, %f, %f) GNSS: (%f, %f, %f)\n",radar.x,radar.y, radar.z, gnss.x, gnss.y, gnss.z);
 
             scv_push_back(vector_radar, &radar);
             scv_push_back(vector, &gnss);
@@ -216,7 +217,7 @@ void process_buffer(char* buffer, ssize_t size) {
         }
     }
 
-    if(!parkingSpotDetected)
+    
         checkForParking();
 
 
@@ -246,65 +247,45 @@ int main(int argc, char const* argv[])
     char buffer[4096] = { 0 };
     char* hello = "Hello from server";
 
-    // Creating socket file descriptor
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("socket failed");
+   
+    struct sockaddr_in server_address;
+    
+    // Create socket
+    new_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (new_socket == -1) {
+        perror("Could not create socket");
         exit(EXIT_FAILURE);
     }
 
-    // Forcefully attaching socket to the port 8080
-    if (setsockopt(server_fd, SOL_SOCKET,
-                   SO_REUSEADDR , &opt,
-                   sizeof(opt))) {
-        perror("setsockopt");
+    // Specify server address
+    server_address.sin_family = AF_INET;
+    server_address.sin_port = htons(SERVER_PORT);
+    if (inet_pton(AF_INET, SERVER_IP, &server_address.sin_addr) <= 0) {
+        perror("Invalid address or address not supported");
         exit(EXIT_FAILURE);
     }
-    if (setsockopt(server_fd, SOL_SOCKET,
-                   SO_REUSEPORT, &opt,
-                   sizeof(opt))) {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
-    }
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
 
-    // Forcefully attaching socket to the port 8080
-    if (bind(server_fd, (struct sockaddr*)&address,
-             sizeof(address))
-        < 0) {
-        perror("bind failed");
+    // Connect to server
+    if (connect(new_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
+        perror("Connection failed");
         exit(EXIT_FAILURE);
     }
-    if (listen(server_fd, 3) < 0) {
-        perror("listen");
-        exit(EXIT_FAILURE);
-    }
-    if ((new_socket
-                 = accept(server_fd, (struct sockaddr*)&address,
-                          &addrlen))
-        < 0) {
-        perror("accept");
-        exit(EXIT_FAILURE);
-    }
+
     sock = new_socket;
     printf("start reading\n");
     bool stop_sent = false;  // Add this line at the beginning of your function
 
 
     // make the car go forward
+        printf("initial control data sent\n");
+
     send_parameters(new_socket, 0.2, 0.0, 0.0, 0,0);
 
 
     while (!parkingSpotDetected) {
         valread = read(new_socket, buffer, sizeof(buffer) - 1);
-        if (valread < 0) {
-            perror("read");
-            break;
-        } else if (valread == 0) {
-            printf("Client disconnected\n");
-            break;
-        } else {
+        printf("valread: %ld\n", valread);
+        if (valread > 0)  {
             char temp[sizeof(buffer) + leftover_size];
             if (leftover_size > 0) {
                 memcpy(temp, leftover, leftover_size);
@@ -322,17 +303,21 @@ int main(int argc, char const* argv[])
 
     park();
 
-    while(1);
 
 
+   
+    send_parameters(sock,0.0, 0.0, 0.0,0, 0);
+    printf("Parking completed\n Command to end simulation sent\n");
 
-    send(new_socket, hello, strlen(hello), 0);
-    printf("Hello message sent\n");
+    
 
+
+   
     // closing the connected socket
     close(new_socket);
     // closing the listening socket
-    close(server_fd);
+
     scv_delete(vector);
+    scv_delete(vector_radar);
     return 0;
 }

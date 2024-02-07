@@ -29,7 +29,7 @@
 
 
 #include "include/scv/scv.h"
-#include "include/scv/scv.c"
+//#include "include/scv/scv.c"
 
 #include <stdbool.h>
 
@@ -53,7 +53,8 @@ struct PairOfTuples {
     struct Tuple OtherVehiclePosition;
 };
 
-int sock = 0;
+
+OS_Socket_Handle_t sock;
 struct PairOfTuples lastDetectedVehicle = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
 struct Tuple midpoint;
 bool parkingSpotDetected = false;
@@ -64,6 +65,7 @@ struct scv_vector *vector_radar;
 
 ssize_t leftover_size = 0;
 char leftover[1024];
+
 bool isZeroTuple(struct Tuple tuple) {
     return tuple.x == 0.0 && tuple.y == 0.0; //&& tuple.z == 0.0;
 }
@@ -93,15 +95,16 @@ struct Tuple calculateMidpoint(struct Tuple *point1, struct Tuple *point2) {
     return midpoint;
 }
 
-void send_control_data(int socket, struct ControlData data) {
+void send_control_data(OS_Socket_Handle_t sock, struct ControlData data) {
     // Serialize the struct into a byte stream
     char buffer[sizeof(struct ControlData)];
     memcpy(buffer, &data, sizeof(struct ControlData));
 
     // Send the byte stream
-    send(socket, buffer, sizeof(buffer), 0);
+     size_t n;
+    OS_Socket_write(sock, buffer, sizeof(buffer), &n);
 }
-void send_parameters(int sock, float throttle, float steer, float brake, int reverse, float time) {
+void send_parameters(OS_Socket_Handle_t sock, float throttle, float steer, float brake, int reverse, float time) {
     struct ControlData data;
     data.throttle = throttle;
     data.steer = steer;
@@ -136,7 +139,7 @@ void park() {
 }
 
 void checkForParking() {
-    uint16_t t = 0;
+    
     while(1) {
         ssize_t size = vector->size;
         ssize_t size_radar = vector_radar->size;
@@ -234,8 +237,8 @@ void process_buffer(char* buffer, ssize_t size) {
         }
     }
 
-    if(!parkingSpotDetected)
-        checkForParking();
+    
+    checkForParking();
 
 
 
@@ -391,6 +394,7 @@ waitForConnectionEstablished(
 //------------------------------------------------------------------------------
 int run()
 {
+    
     Debug_LOG_INFO("Starting test_app_server...");
 
     // dont forget to clean the vectors at the end
@@ -407,10 +411,10 @@ int run()
         return -1;
     }
 
-    OS_Socket_Handle_t hSocket;
+    OS_Socket_Handle_t new_socket;
     ret = OS_Socket_create(
               &networkStackCtx,
-              &hSocket,
+              &new_socket,
               OS_AF_INET,
               OS_SOCK_STREAM);
     if (ret != OS_SUCCESS)
@@ -421,43 +425,40 @@ int run()
 
     const OS_Socket_Addr_t dstAddr =
     {
-        .addr = CFG_TEST_HTTP_SERVER,
-        .port = EXERCISE_CLIENT_PORT
+        .addr = SERVER_IP,
+        .port = SERVER_PORT
     };
 
-    ret = OS_Socket_connect(hSocket, &dstAddr);
+    ret = OS_Socket_connect(new_socket, &dstAddr);
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("OS_Socket_connect() failed, code %d", ret);
-        OS_Socket_close(hSocket);
+        OS_Socket_close(new_socket);
         return ret;
     }
 
-    ret = waitForConnectionEstablished(hSocket.handleID);
+    ret = waitForConnectionEstablished(new_socket.handleID);
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("waitForConnectionEstablished() failed, error %d", ret);
-        OS_Socket_close(hSocket);
+        OS_Socket_close(new_socket);
         return -1;
     }
-
+    sock = new_socket;
+    char buffer[4096] = { 0 };
     send_parameters(new_socket, 0.2, 0.0, 0.0, 0,0);
+    size_t valread = 0;
 
-    while (read > 0 || ret == OS_ERROR_TRY_AGAIN) {
+    while (1) {
 
         // break out if we detected parking spot
         if(parkingSpotDetected) {
             break;
         }
 
-        valread = read(new_socket, buffer, sizeof(buffer) - 1);
-        if (valread < 0) {
-            perror("read");
-            break;
-        } else if (valread == 0) {
-            printf("Client disconnected\n");
-            break;
-        } else {
+        ret = OS_Socket_read(new_socket, buffer, sizeof(buffer) - 1, &valread);
+        
+        if (valread > 0) {
             char temp[sizeof(buffer) + leftover_size];
             if (leftover_size > 0) {
                 memcpy(temp, leftover, leftover_size);
@@ -477,11 +478,13 @@ int run()
 
 
     /// there is endloss loop here
-    while(1);
+    send_parameters(new_socket,0.0, 0.0, 0.0,0, 0);
+    printf("Parking completed\n Command to end simulation sent\n");
 
 
-    OS_Socket_close(hSocket);
-
+    OS_Socket_close(new_socket);
+    scv_delete(vector);
+    scv_delete(vector_radar);
     Debug_LOG_INFO("Demo completed successfully.");
 
     return 0;
