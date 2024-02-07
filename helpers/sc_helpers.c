@@ -107,10 +107,10 @@ uint32_t decrypt(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t* ciphert
                         iv,
                         12);
     OS_CryptoCipher_start(hCipher, NULL, 0);
-    size_t outputSize = plaintextLen;
+    size_t outputSize = ciphertextLen - 12;
     OS_CryptoCipher_process(hCipher, ciphertext+12, ciphertextLen-12, plaintext, &outputSize);
 
-    if(outputSize != plaintextLen) {
+    if(outputSize != ciphertextLen - 12) {
         Debug_LOG_ERROR("Only %d of %d bytes were encrypted successfully", outputSize, ciphertextLen - 12);
         return -1;
     }

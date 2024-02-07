@@ -629,6 +629,20 @@ static OS_Error_t exchange_keys(void) {
         Debug_LOG_ERROR("The key could not be stored in the TPM!");
         return -1;
     }  
+
+/*start of debug*/
+    uint8_t* K_sym = malloc(32);
+    uint32_t keyLen = 32;
+    if(keystore.loadKey(hStoredKey, &keyLen) != 0 || keyLen != 32) {
+        Debug_LOG_ERROR("There was an error when loading the symmetric key for encryption");
+        return -1;
+    }
+    memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
+    Debug_LOG_INFO("dumping key loaded back from TPM");
+    Debug_DUMP_INFO(K_sym, 32);
+    /*end of debug*/
+
+
      
     Debug_LOG_INFO("Key sucessfully exchanged");
     return OS_SUCCESS;

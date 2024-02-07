@@ -1,13 +1,12 @@
 import socket
-from Crypto import Hash, Random
+from Crypto import Random
+from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, AES, PKCS1_v1_5
 
 HOST = "10.0.0.10"      #arbitrary, make sure to configure on the computer when running the python client
 CRYPTO_PORT = 65432     #arbitrary, add later to system_config.h
 COMM_PORT = 1234        #arbitrary, add later to system_config.h
-
-#TODO: add a hash of EK_pub for comparison
 
 #please run this function before performing any secure send/recv operations
 def setup_crypto_config():
@@ -32,6 +31,13 @@ def setup_crypto_config():
             SRK = RSA.construct((SRK_n, SRK_exp))
             
             #TODO: 4.- compare received EK_pub with stored hash
+            rec_ek_hash = SHA256.new(data[8:8+EK_nLen])
+            rec_digest = rec_ek_hash.hexdigest()
+            f = open("EK_hash.txt", "r")
+            og_digest = f.readline().strip()
+            if rec_digest != og_digest:
+                print("The received EK is not correct, rec_digest: {rec_digest}")
+
 
             #5.- generate K_sym and encrypt: ciphertext = encrypt(EK_pub, encrypt(SRK_pub, K_sym))
             global K_sym

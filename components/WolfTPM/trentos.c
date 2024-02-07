@@ -79,9 +79,9 @@ void pre_init(void) {
   CHKRCV(wolfTPM2_Init(&dev, ioCb, NULL), "Failed to initialize TPM!");
   Debug_LOG_INFO("TPM initialized successfully");
 
-  /* TODO: Remove this part */
 
-#if 0
+/* ENABLE THIS TO CLEAR THE TPM AND GENERATE NEW PERSISTENT CEK */
+#ifdef CLEAR_TPM
   Debug_LOG_INFO("Clearing TPM");
   CHKRCV(wolfTPM2_Clear(&dev), "Failed to clear TPM!");
   Debug_LOG_INFO("TPM cleared successfully");
