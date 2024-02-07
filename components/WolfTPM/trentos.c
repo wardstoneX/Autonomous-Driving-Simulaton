@@ -24,6 +24,8 @@
 
 #define NV_INDEX TPM_20_OWNER_NV_SPACE
 #define NV_MAX_SIZE 2048
+#define NV_INDEX_2 NV_INDEX + NV_MAX_SIZE
+
 
 static OS_Dataport_t entropyPort = OS_DATAPORT_ASSIGN(entropy_port);
 static OS_Dataport_t keystorePort = OS_DATAPORT_ASSIGN(keystore_port);
@@ -76,11 +78,11 @@ void pre_init(void) {
   Debug_LOG_INFO("TPM initialized successfully");
 
   /* TODO: Remove this part */
-#if 0
+
   Debug_LOG_INFO("Clearing TPM");
   CHKRCV(wolfTPM2_Clear(&dev), "Failed to clear TPM!");
   Debug_LOG_INFO("TPM cleared successfully");
-#endif
+
 
   /* TODO: After increasing timeout, it works, but why does it take so long? */
   /* Create the **real** SRK, which is needed for the storage hiearchy.
@@ -153,16 +155,24 @@ void first_setup(void) {
       wolfTPM2_NVCreateAuth(&dev, &nvParent, &nv, NV_INDEX,
 	nvAttr, NV_MAX_SIZE, NULL, 0),
       "Failed to create NV index!");
+  CHKRCV(
+      wolfTPM2_NVCreateAuth(&dev, &nvParent, &nv, NV_INDEX_2,
+	nvAttr, NV_MAX_SIZE, NULL, 0),
+      "Failed to create NV index!");
 
   /* Store cEK and cSRK there */
+  Debug_LOG_INFO("Size of cEK is %d", sizeof(cek));
   CHKRCV(
       wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
 	(byte*) &cek, sizeof(cek), 0),
       "Failed to save cEK in NV!");
+      
+      /*
   CHKRCV(
       wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
 	(byte*) &csrk, sizeof(csrk), sizeof(cek)),
       "Failed to save cSRK in NV!");
+      */
 }
 
 void create_rsa_key(WOLFTPM2_KEYBLOB *key, uint32_t bits) {
