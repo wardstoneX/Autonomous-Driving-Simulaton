@@ -33,13 +33,13 @@ static OS_Dataport_t cryptoPort = OS_DATAPORT_ASSIGN(crypto_port);
 WOLFTPM2_DEV dev  = {0};
 TPM2HalIoCb ioCb  = TPM2_IoCb_TRENTOS_SPI;
 WOLFTPM2_KEY srk  = {0};
-WOLFTPM2_KEY cek  = {0};
-WOLFTPM2_KEY csrk = {0};
+WOLFTPM2_KEYBLOB cek  = {0};
+WOLFTPM2_KEYBLOB csrk = {0};
 WOLFTPM2_NV nv	  = {0};
 uint32_t nv_off   = sizeof(cek) + sizeof(csrk);
 
 /* Declarations of local helper functions */
-void create_rsa_key(WOLFTPM2_KEY *key, uint32_t bits);
+void create_rsa_key(WOLFTPM2_KEYBLOB *key, uint32_t bits);
 void first_setup(void);
 
 /* Initialization that must be done before initializing 
@@ -105,20 +105,25 @@ void pre_init(void) {
   }
   Debug_LOG_INFO("Opened NV storage.");
 
-  Debug_LOG_INFO("Loading cEK and cSRK...");
+  Debug_LOG_INFO("Reading cEK and cSRK...");
   uint32_t sz = sizeof(cek);
   CHKRCV(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
 	(byte*) &cek, &sz, 0),
-      "Failed to load cEK!");
+      "Failed to read cEK!");
   assert(sz == sizeof(cek));
   sz = sizeof(csrk);
   CHKRCV(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
 	(byte*) &csrk, &sz, sizeof(cek)),
-      "Failed to load cSRK!");
+      "Failed to read cSRK!");
   assert(sz == sizeof(csrk));
-  Debug_LOG_INFO("Loaded cEK and cSRK.");
+  Debug_LOG_INFO("Read cEK and cSRK.");
   Debug_LOG_DEBUG("cEK is:");
   Debug_DUMP_DEBUG(cek.pub.publicArea.unique.rsa.buffer, CEK_SIZE);
+
+  Debug_LOG_INFO("Loading cEK and cSRK into TPM...");
+  CHKRCV(wolfTPM2_LoadKey(&dev, &cek, &srk.handle), "Failed to load cEK!");
+  CHKRCV(wolfTPM2_LoadKey(&dev, &csrk, &srk.handle), "Failed to load cSRK!");
+  Debug_LOG_INFO("Loaded cEK and cSRK into TPM.");
 
   Debug_LOG_INFO("TPM initialized succesfully!");
 }
@@ -160,7 +165,7 @@ void first_setup(void) {
       "Failed to save cSRK in NV!");
 }
 
-void create_rsa_key(WOLFTPM2_KEY *key, uint32_t bits) {
+void create_rsa_key(WOLFTPM2_KEYBLOB *key, uint32_t bits) {
   TPMT_PUBLIC tmpt;
   wolfTPM2_GetKeyTemplate_RSA(
       &tmpt,
@@ -169,16 +174,16 @@ void create_rsa_key(WOLFTPM2_KEY *key, uint32_t bits) {
       | TPMA_OBJECT_decrypt);
   tmpt.parameters.rsaDetail.keyBits = bits;
   CHKRCV(
-      wolfTPM2_CreateAndLoadKey(&dev, key, &srk.handle, &tmpt, NULL, 0),
+      wolfTPM2_CreateKey(&dev, key, &srk.handle, &tmpt, NULL, 0),
       "Failed to create key!");
 }
 
 WOLFTPM2_KEY *getKey(enum if_Crypto_Key key) {
   switch (key) {
     case IF_CRYPTO_KEY_CEK:
-      return &cek;
+      return (WOLFTPM2_KEY*) &cek;
     case IF_CRYPTO_KEY_CSRK:
-      return &csrk;
+      return (WOLFTPM2_KEY*) &csrk;
     default:
       Debug_LOG_ERROR("Unknown key %d!", key);
       return NULL;
