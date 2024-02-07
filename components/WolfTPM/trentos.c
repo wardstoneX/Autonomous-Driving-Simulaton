@@ -218,19 +218,16 @@ void keystore_rpc_getCSRK_RSA1024(uint32_t *exp) {
  * Returns a handle in case of success, or -1 in case of failure.
  * Expects the raw key data on the dataport.
  */
-uint32_t keystore_rpc_storeKey(uint32_t keyLen, uint32_t ivLen) {
+uint32_t keystore_rpc_storeKey(uint32_t keyLen) {
   uint32_t start = nv_off;
   CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
 	                      (byte*) &keyLen, sizeof(uint32_t), nv_off), -1);
   nv_off += sizeof(uint32_t);
-  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
-	                      (byte*) &ivLen, sizeof(uint32_t), nv_off), -1);
-  nv_off += sizeof(uint32_t);
 
   CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
 	                      OS_Dataport_getBuf(keystorePort),
-			      keyLen + ivLen, nv_off), -1);
-  nv_off += keyLen + ivLen;
+			      keyLen, nv_off), -1);
+  nv_off += keyLen;
   return start;
 }
 
@@ -239,7 +236,7 @@ uint32_t keystore_rpc_storeKey(uint32_t keyLen, uint32_t ivLen) {
  * Returns 0 in case of success, or non-zero in case of failure.
  * Expects the raw key data on the dataport.
  */
-int keystore_rpc_loadKey(uint32_t hdl, uint32_t *keyLen, uint32_t *ivLen) {
+int keystore_rpc_loadKey(uint32_t hdl, uint32_t *keyLen) {
   /* Read length of key */
   uint32_t sz = sizeof(uint32_t);
   uint32_t off = hdl;
@@ -247,17 +244,11 @@ int keystore_rpc_loadKey(uint32_t hdl, uint32_t *keyLen, uint32_t *ivLen) {
 	                    (byte*) keyLen, &sz, off), 1);
   assert(sz == sizeof(keyLen));
   off += sz;
-  /* Read length of IV */
-  sz = sizeof(uint32_t);
-  CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
-	                    (byte*) ivLen, &sz, off), 1);
-  assert(sz == sizeof(ivLen));
-  off += sz;
   /* Read key data */
-  sz = *keyLen + *ivLen;
+  sz = *keyLen;
   CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
 	                     OS_Dataport_getBuf(keystorePort), &sz, off), 1);
-  assert(sz == *keyLen + *ivLen);
+  assert(sz == *keyLen);
   return 0;
 }
 

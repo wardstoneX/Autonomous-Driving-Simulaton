@@ -9,8 +9,8 @@
 typedef struct {
   void (*getCEK_RSA2048)(uint32_t *exp);
   void (*getCSRK_RSA1024)(uint32_t *exp);
-  uint32_t (*storeKey)(uint32_t keyLen, uint32_t ivLen);
-  int (*loadKey)(uint32_t hdl, uint32_t *keyLen, uint32_t *ivLen);
+  uint32_t (*storeKey)(uint32_t keyLen);
+  int (*loadKey)(uint32_t hdl, uint32_t *keyLen);
   OS_Dataport_t dataport;
 } if_KeyStore_t;
 
