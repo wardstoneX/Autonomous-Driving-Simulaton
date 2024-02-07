@@ -302,7 +302,7 @@ int crypto_rpc_decrypt_RSA_OAEP(int key, int *len) {
    * So it shouldn't be a problem that input and output pointer are the same.
    */
   CHKRCI(
-      wolfTPM2_RsaDecrypt(&dev, pKey, TPM_ALG_RSAES,
+      wolfTPM2_RsaDecrypt(&dev, pKey, TPM_ALG_OAEP,
 	                  OS_Dataport_getBuf(cryptoPort), *len,
 			  OS_Dataport_getBuf(cryptoPort), len),
       1);
@@ -326,7 +326,7 @@ int crypto_rpc_encrypt_RSA_OAEP(int key, int *len) {
    * and output buffer are the same.
    */
   CHKRCI(
-      wolfTPM2_RsaEncrypt(&dev, pKey, TPM_ALG_RSAES,
+      wolfTPM2_RsaEncrypt(&dev, pKey, TPM_ALG_OAEP,
 	                  OS_Dataport_getBuf(cryptoPort), *len,
 			  OS_Dataport_getBuf(cryptoPort), len),
       1);
