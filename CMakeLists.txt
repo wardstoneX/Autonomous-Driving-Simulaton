@@ -45,8 +45,6 @@ DeclareCAmkESComponent(
         os_core_api
         os_socket_client
         os_crypto
-        #os_filesystem
-        #os_keystore_file
 )
 
 DeclareCAmkESComponent(

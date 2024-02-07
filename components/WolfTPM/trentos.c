@@ -126,6 +126,7 @@ void pre_init(void) {
       wolfTPM2_NVCreateAuth(&dev, &nvParent, &nv, NV_INDEX,
 	nvAttr, NV_MAX_SIZE, NULL, 0),
       "Failed to create NV index!");
+  Debug_LOG_INFO("TPM initialized succesfully!");
 }
 
 /* Helper functions */
@@ -171,6 +172,7 @@ void keystore_rpc_getCEK_RSA2048(uint32_t *exp) {
   memcpy(
       OS_Dataport_getBuf(keystorePort),
       cek.pub.publicArea.unique.rsa.buffer, CEK_SIZE);
+  Debug_DUMP_INFO(OS_Dataport_getBuf(keystorePort), CEK_SIZE);
 }
 
 /* Places the cSRK into the dataport. */
@@ -179,6 +181,7 @@ void keystore_rpc_getCSRK_RSA1024(uint32_t *exp) {
   memcpy(
       OS_Dataport_getBuf(keystorePort),
       csrk.pub.publicArea.unique.rsa.buffer, CSRK_SIZE);
+  Debug_DUMP_INFO(OS_Dataport_getBuf(keystorePort), CSRK_SIZE);
 }
 
 /* Stores key in NV memory.
@@ -242,6 +245,7 @@ int keystore_rpc_loadKey(uint32_t hdl, uint32_t *keyLen, uint32_t *ivLen) {
  */
 int crypto_rpc_decrypt_RSA_OAEP(int key, int *len) {
   WOLFTPM2_KEY *pKey = getKey(key);
+  Debug_LOG_DEBUG("Reach");
 
   /* Note: Looking at wolfTPM2_RsaDecrypt source code, it appears that they
    * copy the ciphertext into an internal buffer, perform operations on that,

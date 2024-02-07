@@ -4,8 +4,6 @@
 
 static OS_Error_t waitForNetworkStackInit(const if_OS_Socket_t* const ctx);
 
-static OS_Error_t waitForConnectionEstablished(const int handleId);
-
-static OS_Error_t secureCommunication_setup();
+static OS_Error_t waitForConnectionEstablished(const int handleId, const if_OS_Socket_t* const ctx);
 
 static OS_Error_t exchange_keys(void);

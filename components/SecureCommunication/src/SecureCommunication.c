@@ -18,33 +18,6 @@
 #include "if_Crypto.h"
 
 
-
-//can't include "network_stack_core.h" for some reason
-#define CHECK_IS_RUNNING(_currentState_)                                       \
-    do                                                                         \
-    {                                                                          \
-        if (_currentState_ != RUNNING)                                         \
-        {                                                                      \
-            if (_currentState_ == FATAL_ERROR)                                 \
-            {                                                                  \
-                Debug_LOG_ERROR("%s: FATAL_ERROR occurred in the NetworkStack" \
-                                , __func__);                                   \
-                return OS_ERROR_ABORTED;                                       \
-            }                                                                  \
-            else                                                               \
-            {                                                                  \
-                Debug_LOG_TRACE("%s: NetworkStack currently not running",      \
-                __func__);                                                     \
-               return OS_ERROR_NOT_INITIALIZED;                                \
-            }                                                                  \
-        }                                                                      \
-    } while (0)
-
-
-
-
-//TODO: figure out if I need to implement this function myself
-seL4_Word secureCommunication_rpc_get_sender_id(void);
 //------------------------------------------------------------------------------
 
 static const if_OS_Socket_t networkStackCtx =
@@ -75,21 +48,16 @@ static OS_CryptoKey_Spec_t aes_spec = {
 
 
 
-//static OS_CryptoKey_Attrib_t attr = {.flags = 0, .keepLocal = 1};
-
-
-
-
 static OS_Crypto_Handle_t hCrypto;
 
-//static OS_Dataport_t entropyPort = OS_DATAPORT_ASSIGN(entropy_dp);
-static OS_Dataport_t keystorePort = OS_DATAPORT_ASSIGN(keystore_dp);
-static OS_Dataport_t cryptoPort = OS_DATAPORT_ASSIGN(crypto_dp);
+
 
 if_KeyStore_t keystore = IF_KEYSTORE_ASSIGN(keystore_rpc, keystore_dp);
 if_Crypto_t crypto = IF_CRYPTO_ASSIGN(crypto_rpc, crypto_dp);
 
 static uint32_t hStoredKey;
+
+static int is_initialized = 0;
 
 
 
@@ -99,23 +67,17 @@ static uint32_t hStoredKey;
 
 void post_init(void) {
     Debug_LOG_INFO("post_init() called in SecureCommunication");
-
     OS_Error_t ret;
-    do{
-        ret = secureCommunication_setup();
-    } while (ret != OS_SUCCESS);
-    Debug_LOG_INFO("Setup completed.");
 
+    //setup crypto objects
+    Debug_LOG_INFO("Initializing Crypto API.\n");
+    ret = OS_Crypto_init(&hCrypto, &cryptoCfg);
+    if (ret != OS_SUCCESS) {
+        Debug_LOG_ERROR("Call to OS_Crypto_init() failed in SecureComunication, err %d", ret);
+    }
 
-    do{
-        ret = exchange_keys();
-    } while (ret != OS_SUCCESS);
-
-
-    
     Debug_LOG_INFO("Waiting for NetworkStack_PicoTcp to be initialized");
-    if ((ret = waitForNetworkStackInit(&networkStackCtx)) != OS_SUCCESS)
-    {
+    if ((ret = waitForNetworkStackInit(&networkStackCtx)) != OS_SUCCESS) {
         Debug_LOG_ERROR("waitForNetworkStackInit() failed with: %d", ret);
     }
 
@@ -141,6 +103,13 @@ secureCommunication_rpc_socket_create(
     int* const pHandle
 )
 {
+    if(!is_initialized){
+        is_initialized = exchange_keys() == OS_SUCCESS;
+        if (!is_initialized) {
+            Debug_LOG_ERROR("KEy exchange failed, aborting");
+            exit(1);
+        }
+    }
     CHECK_IS_RUNNING(OS_Socket_getStatus(&networkStackCtx));
 
     OS_Socket_Handle_t apiHandle = {.ctx = networkStackCtx, .handleID = *pHandle};
@@ -204,7 +173,7 @@ secureCommunication_rpc_socket_connect(
 
     //in difference to OS_Socket_connect, this function will only return after the notification of successfull connection has been received
     Debug_LOG_INFO("Waiting for connection");
-    ret = waitForConnectionEstablished(apiHandle.handleID);
+    ret = waitForConnectionEstablished(apiHandle.handleID, &networkStackCtx);
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("waitForConnectionEstablished() failed, error %d", ret);
@@ -513,61 +482,48 @@ secureCommunication_rpc_get_size(void){
 // Other functions
 //----------------------------------------------------------------------
 
-static OS_Error_t secureCommunication_setup(){
-    /*
-    //TODO: change keystore functionality to the TPM instead
-    */
-
-
-    OS_Error_t ret;
-
-
-    //setup crypto objects
-    Debug_LOG_INFO("Initializing Crypto API.\n");
-    ret = OS_Crypto_init(&hCrypto, &cryptoCfg);
-
-
-    return ret;
-
-}
 
 
 
 static OS_Error_t exchange_keys(void) {
+    Debug_LOG_INFO("KEY EXCHANGE ALGORITHM CALLED");
     OS_Error_t ret;
 
-    //TODO: 1.- take ownership of the tpm
-    
-    
-    
-
     //2.- create new srk
+    Debug_LOG_INFO("Creating SRK");
     uint32_t exp_SRK;
     keystore.getCSRK_RSA1024(&exp_SRK);
-    uint8_t cSRK_ssh[7 + 3*sizeof(uint32_t) + 1024/8];
-    if(toOpenSSHPublicRSA((uint8_t*)exp_SRK, 4, OS_Dataport_getBuf(keystorePort), 1024/8, cSRK_ssh, sizeof(cSRK_ssh)) != sizeof(cSRK_ssh)) {
-        Debug_LOG_WARNING("Something went wrong when converting cSRK to OpenSSH format");
+    uint8_t cSRK_ssh[8 + CSRK_SIZE];
+    uint32_t converted;
+    if((converted = formatForPython(exp_SRK, CSRK_SIZE, OS_Dataport_getBuf(keystore.dataport), sizeof(cSRK_ssh), cSRK_ssh)) != sizeof(cSRK_ssh)) {
+        Debug_LOG_WARNING("SOMETHING WENT WRONG when converting cSRK to OpenSSH format, converted %d of %d bytes", converted, sizeof(cSRK_ssh));
+        return -1;
     }
-
-
+    Debug_LOG_INFO("SRK created");
+    Debug_DUMP_INFO(cSRK_ssh, sizeof(cSRK_ssh));
 
     //3.- connect to python client and send EK_pub, SRK_pub
+    Debug_LOG_INFO("Creating EK");
     uint32_t exp_EK;
     keystore.getCEK_RSA2048(&exp_EK);
-    uint8_t cEK_ssh[7 + 3*sizeof(uint32_t) + 2048/8];
-    if(toOpenSSHPublicRSA((uint8_t*)exp_EK, 4, OS_Dataport_getBuf(keystorePort), 2048/8, cEK_ssh, sizeof(cEK_ssh)) != sizeof(cEK_ssh)) {
-        Debug_LOG_WARNING("Something went wrong when converting cEK to OpenSSH format");
+    uint8_t cEK_ssh[8 + CEK_SIZE];
+    if((converted = formatForPython(exp_EK, CEK_SIZE, OS_Dataport_getBuf(keystore.dataport), sizeof(cEK_ssh), cEK_ssh)) != sizeof(cEK_ssh)) {
+        Debug_LOG_WARNING("SOMETHING WENT WRONG when converting cEK to OpenSSH format, converted %d of %d bytes", converted, sizeof(cEK_ssh));
+        return -1;
     }
-
-
+    Debug_LOG_INFO("EK created");
+    Debug_DUMP_INFO(cEK_ssh, sizeof(cEK_ssh));
 
     Debug_LOG_INFO("Establishing connection to python client on keyexchange port");
 
-    if ((ret = waitForNetworkStackInit(&networkStackCtx)) != OS_SUCCESS)
+    ret = waitForNetworkStackInit(&networkStackCtx);
+    Debug_LOG_INFO("returned from wait for nwstack init");
+    if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("waitForNetworkStackInit() failed with: %d", ret);
         return ret;
     }
+    Debug_LOG_INFO("stack is initialized");
 
     OS_Socket_Handle_t hSocket;
     ret = OS_Socket_create(
@@ -580,6 +536,7 @@ static OS_Error_t exchange_keys(void) {
         Debug_LOG_ERROR("OS_Socket_create() failed, code %d", ret);
         return ret;
     }
+    Debug_LOG_INFO("socket is created");
 
     const OS_Socket_Addr_t dstAddr =
     {
@@ -594,8 +551,9 @@ static OS_Error_t exchange_keys(void) {
         OS_Socket_close(hSocket);
         return ret;
     }
+    Debug_LOG_INFO("returned from connect call!");
 
-    ret = waitForConnectionEstablished(hSocket.handleID);
+    ret = waitForConnectionEstablished(hSocket.handleID, &networkStackCtx);
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("waitForConnectionEstablished() failed, error %d", ret);
@@ -605,21 +563,14 @@ static OS_Error_t exchange_keys(void) {
 
     Debug_LOG_INFO("Connection established, sending EK_pub and SRK_pub to python client");
     
-    /**
-     * The payload consists of 4 bytes stating the length of cEK, followed by the bytes of cEK and cSRK in OpenSSH format.
-     */
-    uint32_t cEK_ssh_size = sizeof(cEK_ssh);
-    char* payload[sizeof(cEK_ssh_size) + sizeof(cEK_ssh) + sizeof(cSRK_ssh)];
-    memmove(payload, &cEK_ssh_size, sizeof(uint32_t));
-    memmove(payload + sizeof(uint32_t), cEK_ssh, sizeof(cEK_ssh));
-    memmove(payload + sizeof(uint32_t)+ sizeof(cEK_ssh), cSRK_ssh, sizeof(cSRK_ssh));
+    char payload[sizeof(cEK_ssh) + sizeof(cSRK_ssh)];
+    memmove(payload, cEK_ssh, sizeof(cEK_ssh));
+    memmove(payload + sizeof(cEK_ssh), cSRK_ssh, sizeof(cSRK_ssh));
+    Debug_LOG_INFO("PRINTING THE PAYLOAD");
+    Debug_DUMP_INFO(payload, sizeof(payload));
 
-    Debug_LOG_INFO("PRINTING THE GENERATED EK SSH");
-    printf("OpenSSH of cEK: %.*s", sizeof(cEK_ssh), cEK_ssh);
-  
     size_t n;
     size_t payload_len = sizeof(payload);
-
     do
     {
         seL4_Yield();
@@ -635,10 +586,8 @@ static OS_Error_t exchange_keys(void) {
 
     Debug_LOG_INFO("Public keys successfully sent");
 
-
     //6.- receive response from python client
     Debug_LOG_INFO("Waiting for response from python client");
-
     static char buffer[OS_DATAPORT_DEFAULT_SIZE];
     char* position = buffer;
     size_t read = 0;
@@ -646,7 +595,6 @@ static OS_Error_t exchange_keys(void) {
     do {
         seL4_Yield();
         ret = OS_Socket_read(hSocket, position, sizeof(buffer) - (position - buffer), &read);
-
         Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
 
         switch (ret)
@@ -656,10 +604,12 @@ static OS_Error_t exchange_keys(void) {
             break;
         case OS_ERROR_CONNECTION_CLOSED:
             Debug_LOG_WARNING("connection closed");
+            position = &position[read];
             read = 0;
             break;
         case OS_ERROR_NETWORK_CONN_SHUTDOWN:
             Debug_LOG_WARNING("connection shut down");
+            position = &position[read];
             read = 0;
             break;
         case OS_ERROR_TRY_AGAIN:
@@ -678,47 +628,37 @@ static OS_Error_t exchange_keys(void) {
     char ciphertext[position - buffer];
     memmove(ciphertext, buffer, sizeof(ciphertext));
 
-
     //7.- decrypt the ciphertext to get K_sym
-    Debug_LOG_INFO("Decrypting...");
-
+    Debug_LOG_INFO("Decrypting...\n len of cyphertext is %d", sizeof(ciphertext));
     int len = sizeof(ciphertext);
-    memmove(OS_Dataport_getBuf(cryptoPort), ciphertext, len);
+    memmove(OS_Dataport_getBuf(crypto.dataport), ciphertext, len);
     crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CEK, &len);
     crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CSRK, &len);
-
-    if(len != 12 + 32) {
-        Debug_LOG_WARNING("Something might have gone wrong, received %d bytes instead of %d", len, 12+32);
+    if(len != 32) {
+        Debug_LOG_WARNING("Something might have gone wrong, received %d bytes instead of %d", len, 32);
     }
 
     //following block is for debug purposes
     Debug_LOG_INFO("PRINTING THE RECEIVED KEY DATA!!!!!!!!!!!!!!");
     Debug_LOG_INFO("Key:");
-    Debug_DUMP_INFO(OS_Dataport_getBuf(cryptoPort), 32);
-    Debug_LOG_INFO("IV:");
-    Debug_DUMP_INFO(OS_Dataport_getBuf(cryptoPort) + 32, 12);
+    Debug_DUMP_INFO(OS_Dataport_getBuf(crypto.dataport), 32);
     /*debug ends here*/
 
-     
-    
-
-
-    
 
     //8.- store K_sym in the keystore
-    memmove(OS_Dataport_getBuf(keystorePort), OS_Dataport_getBuf(cryptoPort), 32 + 12);
+    //TODO: remove dummy IV
+    uint8_t dummyIV[12] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12};
+    memmove(OS_Dataport_getBuf(keystore.dataport), OS_Dataport_getBuf(crypto.dataport), 32);
+    memmove(OS_Dataport_getBuf(keystore.dataport), dummyIV, 12);
     hStoredKey = keystore.storeKey(32, 12);
     if(hStoredKey == -1) {
         Debug_LOG_ERROR("The key could not be stored in the TPM!");
-        //TODO: find a better return value on error
         return -1;
     }  
      
-
     Debug_LOG_INFO("Key sucessfully exchanged");
     return OS_SUCCESS;
 }
-
 
 
 static OS_Error_t
@@ -747,11 +687,10 @@ waitForNetworkStackInit(
     }
 }
 
-
-
 static OS_Error_t
 waitForConnectionEstablished(
-    const int handleId)
+    const int handleId,
+    const if_OS_Socket_t* const ctx)
 {
     OS_Error_t ret;
 
@@ -759,7 +698,7 @@ waitForConnectionEstablished(
     // established.
     for (;;)
     {
-        ret = OS_Socket_wait(&networkStackCtx);
+        ret = OS_Socket_wait(ctx);
         if (ret != OS_SUCCESS)
         {
             Debug_LOG_ERROR("OS_Socket_wait() failed, code %d", ret);
@@ -771,7 +710,7 @@ waitForConnectionEstablished(
         int numberOfSocketsWithEvents;
 
         ret = OS_Socket_getPendingEvents(
-                  &networkStackCtx,
+                  ctx,
                   evtBuffer,
                   evtBufferSize,
                   &numberOfSocketsWithEvents);
@@ -852,5 +791,3 @@ waitForConnectionEstablished(
 
     return ret;
 }
-
-
