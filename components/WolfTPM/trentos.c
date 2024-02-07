@@ -22,9 +22,9 @@
   return b; \
 }
 
-#define NV_INDEX TPM_20_OWNER_NV_SPACE
 #define NV_MAX_SIZE 2048
-#define NV_INDEX_2 NV_INDEX + NV_MAX_SIZE
+#define NV_INDEX_1 TPM_20_OWNER_NV_SPACE
+#define NV_INDEX_2 NV_INDEX_1 + NV_MAX_SIZE
 
 
 static OS_Dataport_t entropyPort = OS_DATAPORT_ASSIGN(entropy_port);
@@ -36,12 +36,14 @@ WOLFTPM2_DEV dev  = {0};
 TPM2HalIoCb ioCb  = TPM2_IoCb_TRENTOS_SPI;
 WOLFTPM2_KEY srk  = {0};
 WOLFTPM2_KEYBLOB cek  = {0};
-WOLFTPM2_KEYBLOB csrk = {0};
-WOLFTPM2_NV nv	  = {0};
-uint32_t nv_off   = sizeof(cek) + sizeof(csrk);
+WOLFTPM2_KEY csrk = {0};
+WOLFTPM2_NV nv1	  = {0};
+WOLFTPM2_NV nv2	  = {0};
+uint32_t nv_off   = sizeof(cek) - NV_MAX_SIZE;
 
 /* Declarations of local helper functions */
 void create_rsa_key(WOLFTPM2_KEYBLOB *key, uint32_t bits);
+void create_and_load_rsa_key(WOLFTPM2_KEY *key, uint32_t bits);
 void first_setup(void);
 
 /* Initialization that must be done before initializing 
@@ -79,9 +81,11 @@ void pre_init(void) {
 
   /* TODO: Remove this part */
 
+#if 0
   Debug_LOG_INFO("Clearing TPM");
   CHKRCV(wolfTPM2_Clear(&dev), "Failed to clear TPM!");
   Debug_LOG_INFO("TPM cleared successfully");
+#endif
 
 
   /* TODO: After increasing timeout, it works, but why does it take so long? */
@@ -95,8 +99,8 @@ void pre_init(void) {
       "Failed to create SRK!");
   Debug_LOG_INFO("Created Storage Root Key");
 
-  Debug_LOG_INFO("Trying to open NV Storage...");
-  if (wolfTPM2_NVOpen(&dev, &nv, NV_INDEX, NULL, 0) != TPM_RC_SUCCESS) {
+  Debug_LOG_INFO("Trying to open NV Storage 1...");
+  if (wolfTPM2_NVOpen(&dev, &nv1, NV_INDEX_1, NULL, 0) != TPM_RC_SUCCESS) {
     Debug_LOG_ERROR("Opening NV Storage failed.");
     first_setup();
     Debug_LOG_ERROR("NEW cEK GENERATED. IMPORT INTO CLIENT:");
@@ -105,74 +109,71 @@ void pre_init(void) {
     printf("\n");
     exit(1);
   }
+  Debug_LOG_INFO("Trying to open NV Storage 2...");
+  CHKRCV(wolfTPM2_NVOpen(&dev, &nv2, NV_INDEX_2, NULL, 0),
+      "Opening NV storage 2 failed!");
   Debug_LOG_INFO("Opened NV storage.");
 
-  Debug_LOG_INFO("Reading cEK and cSRK...");
-  uint32_t sz = sizeof(cek);
-  CHKRCV(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
+  Debug_LOG_INFO("Reading cEK...");
+  uint32_t sz = NV_MAX_SIZE;
+  CHKRCV(wolfTPM2_NVReadAuth(&dev, &nv1, NV_INDEX_1,
 	(byte*) &cek, &sz, 0),
       "Failed to read cEK!");
-  assert(sz == sizeof(cek));
-  sz = sizeof(csrk);
-  CHKRCV(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
-	(byte*) &csrk, &sz, sizeof(cek)),
-      "Failed to read cSRK!");
-  assert(sz == sizeof(csrk));
-  Debug_LOG_INFO("Read cEK and cSRK.");
+  assert(sz == NV_MAX_SIZE);
+  sz = sizeof(cek) - NV_MAX_SIZE;
+  CHKRCV(wolfTPM2_NVReadAuth(&dev, &nv2, NV_INDEX_2,
+	((byte*) &cek) + NV_MAX_SIZE, &sz, 0),
+      "Failed to read cEK!");
+  assert(sz == sizeof(cek) - NV_MAX_SIZE);
+  Debug_LOG_INFO("Read cEK.");
   Debug_LOG_DEBUG("cEK is:");
   Debug_DUMP_DEBUG(cek.pub.publicArea.unique.rsa.buffer, CEK_SIZE);
 
-  Debug_LOG_INFO("Loading cEK and cSRK into TPM...");
+  Debug_LOG_INFO("Loading cEK into TPM...");
   CHKRCV(wolfTPM2_LoadKey(&dev, &cek, &srk.handle), "Failed to load cEK!");
-  CHKRCV(wolfTPM2_LoadKey(&dev, &csrk, &srk.handle), "Failed to load cSRK!");
-  Debug_LOG_INFO("Loaded cEK and cSRK into TPM.");
+  Debug_LOG_INFO("Loaded cEK into TPM.");
+
+  Debug_LOG_INFO("Generating cSRK...");
+  create_and_load_rsa_key(&csrk, CSRK_SIZE * 8);
+  Debug_LOG_INFO("Generated cSRK.");
 
   Debug_LOG_INFO("TPM initialized succesfully!");
 }
 
 /* Helper functions */
 void first_setup(void) {
-  /* Create the cSRK */
-  Debug_LOG_INFO("Creating cSRK");
-  create_rsa_key(&csrk, CSRK_SIZE * 8);
-  Debug_LOG_INFO("Created cSRK (%d bits)",
-                 csrk.pub.publicArea.unique.rsa.size * 8);
-  assert(csrk.pub.publicArea.unique.rsa.size == CSRK_SIZE);
-
-  /* And the cEK */
+  /* Create the cEK */
   Debug_LOG_INFO("Creating cEK");
   create_rsa_key(&cek, CEK_SIZE * 8);
   Debug_LOG_INFO("Created cEK (%d bits)",
                  cek.pub.publicArea.unique.rsa.size * 8);
   assert(cek.pub.publicArea.unique.rsa.size == CEK_SIZE);
 
-  /* Create a new NV index for storing keys */
-  Debug_LOG_INFO("Creating new NV index");
+  /* Create two new NV indices, because one is not enough for
+   * storing a key of size 2324 bytes. */
+  Debug_LOG_INFO("Creating new NV indices");
   word32 nvAttr = 0;
   WOLFTPM2_HANDLE nvParent = { .hndl = TPM_RH_OWNER };
   wolfTPM2_GetNvAttributesTemplate(TPM_RH_OWNER, &nvAttr);
   CHKRCV(
-      wolfTPM2_NVCreateAuth(&dev, &nvParent, &nv, NV_INDEX,
+      wolfTPM2_NVCreateAuth(&dev, &nvParent, &nv1, NV_INDEX_1,
 	nvAttr, NV_MAX_SIZE, NULL, 0),
       "Failed to create NV index!");
   CHKRCV(
-      wolfTPM2_NVCreateAuth(&dev, &nvParent, &nv, NV_INDEX_2,
+      wolfTPM2_NVCreateAuth(&dev, &nvParent, &nv2, NV_INDEX_2,
 	nvAttr, NV_MAX_SIZE, NULL, 0),
       "Failed to create NV index!");
 
   /* Store cEK and cSRK there */
   Debug_LOG_INFO("Size of cEK is %d", sizeof(cek));
   CHKRCV(
-      wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
-	(byte*) &cek, sizeof(cek), 0),
+      wolfTPM2_NVWriteAuth(&dev, &nv1, NV_INDEX_1,
+	(byte*) &cek, NV_MAX_SIZE, 0),
       "Failed to save cEK in NV!");
-      
-      /*
   CHKRCV(
-      wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
-	(byte*) &csrk, sizeof(csrk), sizeof(cek)),
-      "Failed to save cSRK in NV!");
-      */
+      wolfTPM2_NVWriteAuth(&dev, &nv2, NV_INDEX_2,
+	((byte*) &cek) + NV_MAX_SIZE, sizeof(cek) - NV_MAX_SIZE, 0),
+      "Failed to save cEK in NV!");
 }
 
 void create_rsa_key(WOLFTPM2_KEYBLOB *key, uint32_t bits) {
@@ -188,12 +189,25 @@ void create_rsa_key(WOLFTPM2_KEYBLOB *key, uint32_t bits) {
       "Failed to create key!");
 }
 
+void create_and_load_rsa_key(WOLFTPM2_KEY *key, uint32_t bits) {
+  TPMT_PUBLIC tmpt;
+  wolfTPM2_GetKeyTemplate_RSA(
+      &tmpt,
+      TPMA_OBJECT_sensitiveDataOrigin
+      | TPMA_OBJECT_userWithAuth
+      | TPMA_OBJECT_decrypt);
+  tmpt.parameters.rsaDetail.keyBits = bits;
+  CHKRCV(
+      wolfTPM2_CreateAndLoadKey(&dev, key, &srk.handle, &tmpt, NULL, 0),
+      "Failed to create key!");
+}
+
 WOLFTPM2_KEY *getKey(enum if_Crypto_Key key) {
   switch (key) {
     case IF_CRYPTO_KEY_CEK:
       return (WOLFTPM2_KEY*) &cek;
     case IF_CRYPTO_KEY_CSRK:
-      return (WOLFTPM2_KEY*) &csrk;
+      return &csrk;
     default:
       Debug_LOG_ERROR("Unknown key %d!", key);
       return NULL;
@@ -235,11 +249,11 @@ void keystore_rpc_getCSRK_RSA1024(uint32_t *exp) {
  */
 uint32_t keystore_rpc_storeKey(uint32_t keyLen) {
   uint32_t start = nv_off;
-  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
+  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv2, NV_INDEX_2,
 	                      (byte*) &keyLen, sizeof(uint32_t), nv_off), -1);
   nv_off += sizeof(uint32_t);
 
-  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv, NV_INDEX,
+  CHKRCI(wolfTPM2_NVWriteAuth(&dev, &nv2, NV_INDEX_2,
 	                      OS_Dataport_getBuf(keystorePort),
 			      keyLen, nv_off), -1);
   nv_off += keyLen;
@@ -255,13 +269,13 @@ int keystore_rpc_loadKey(uint32_t hdl, uint32_t *keyLen) {
   /* Read length of key */
   uint32_t sz = sizeof(uint32_t);
   uint32_t off = hdl;
-  CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
+  CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv2, NV_INDEX_2,
 	                    (byte*) keyLen, &sz, off), 1);
   assert(sz == sizeof(keyLen));
   off += sz;
   /* Read key data */
   sz = *keyLen;
-  CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv, NV_INDEX,
+  CHKRCI(wolfTPM2_NVReadAuth(&dev, &nv2, NV_INDEX_2,
 	                     OS_Dataport_getBuf(keystorePort), &sz, off), 1);
   assert(sz == *keyLen);
   return 0;
