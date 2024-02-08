@@ -11,7 +11,7 @@ os_set_config_file(
   CONFIG_PROJECT_NAME "system_config"
 )
 
-project(demo_tpm C)
+project(demo_tum_course C)
 
 WolfTPM_DeclareCAmkESComponent(WolfTPM)
 
@@ -50,9 +50,12 @@ DeclareCAmkESComponent(
 DeclareCAmkESComponent(
   TestApp
   SOURCES
-      components/TestApp/src/TestApp.c
+        components/TestApp/src/TestApp.c
+        include/scv/scv.c
+        components/TestApp/src/utils.c
   INCLUDES
       interfaces/headers
+      include/scv
   C_FLAGS
       -Wall
       -Werror
@@ -68,5 +71,5 @@ DeclareCAmkESComponent(
 CAmkESAddCPPInclude(interfaces/camkes)
 CAmkESAddImportPath(interfaces/camkes)
 
-DeclareAndCreateCamkESSystem(demo_tpm.camkes)
+DeclareAndCreateCamkESSystem(demo_tum_course.camkes)
 GenerateSimulateScript()

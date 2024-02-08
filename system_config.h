@@ -30,14 +30,6 @@
 #define Memory_Config_USE_STDLIB_ALLOC
 
 
-//-----------------------------------------------------------------------------
-// StorageServer
-//-----------------------------------------------------------------------------
-/* TODO: We are not using the file system, right? */
-#if 0
-#define FILESYSTEM_1_STORAGE_OFFSET     0
-#define FILESYSTEM_1_STORAGE_SIZE       (1024*32)
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -45,11 +37,11 @@
 //-----------------------------------------------------------------------------
 #define OS_NETWORK_MAXIMUM_SOCKET_NO 1
 
-#define CFG_TEST_HTTP_SERVER      "10.0.0.10"
+#define SERVER_IP                 "10.0.0.10"
 #define ETH_ADDR                  "10.0.0.11"
 #define ETH_GATEWAY_ADDR          "10.0.0.1"
 #define ETH_SUBNET_MASK           "255.255.255.0"
-#define EXERCISE_CLIENT_PORT      8080
+#define SERVER_PORT               6000
 
 
 //-----------------------------------------------------------------------------
