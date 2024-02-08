@@ -2,129 +2,56 @@
  * Copyright (C) 2021-2023, Hensoldt Cyber GmbH
  */
 
-
-
 #include "system_config.h"
 #include "OS_Socket.h"
 #include "interfaces/if_OS_Socket.h"
-
 #include "lib_debug/Debug.h"
 #include <string.h>
-
 #include <camkes.h>
-
-#include <netinet/in.h>
-
-#include "scv.h"
-#include <stdlib.h>
-#include <tgmath.h>
-
-#include <netinet/in.h>
+#include "utils.h"
+#include "include/scv/scv.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <tgmath.h>
 
-
-#include "include/scv/scv.h"
-//#include "include/scv/scv.c"
-
-#include <stdbool.h>
-
-#define PORT 6061
-struct ControlData {
-    float throttle;
-    float steer;
-    float brake;
-    int reverse;
-    float time;
-};
-
-struct Tuple {
-    float x;
-    float y;
-    float z;
-};
-
-struct PairOfTuples {
-    struct Tuple mainVehiclePosition;
-    struct Tuple OtherVehiclePosition;
-};
-
+//#include <netinet/in.h>
+//#include "scv.h"
+//#include <tgmath.h>
+//#include <netinet/in.h>
+//#include <sys/socket.h>
+//#include <unistd.h>
+//#include <tgmath.h>
+//#include <stdbool.h>
 
 OS_Socket_Handle_t sock;
-struct PairOfTuples lastDetectedVehicle = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+
 struct Tuple midpoint;
 bool parkingSpotDetected = false;
 
 struct scv_vector *vector;
-
 struct scv_vector *vector_radar;
 
 ssize_t leftover_size = 0;
 char leftover[1024];
 
-bool isZeroTuple(struct Tuple tuple) {
-    return tuple.x == 0.0 && tuple.y == 0.0; //&& tuple.z == 0.0;
-}
-
-float calculateEuclideanDistance(struct Tuple* tuple1, struct Tuple*tuple2) {
-    float dx = tuple2->x - tuple1->x;
-    float dy = tuple2->y - tuple1->y;
-    float dz = tuple2->z - tuple1->z;
-
-    return sqrt(dx * dx + dy * dy + dz * dz);
-}
-double predict_power(double x) {
-    // Use the parameters obtained from curve fitting
-    double a = 1.27038607;
-    double b = 0.77445365;
-
-    // Calculate y based on the power function
-    double y = a * pow(x, b);
-
-    return y;
-}
-struct Tuple calculateMidpoint(struct Tuple *point1, struct Tuple *point2) {
-    struct Tuple midpoint;
-    midpoint.x = (point1->x + point2->x) / 2;
-    midpoint.y = (point1->y + point2->y) / 2;
-    midpoint.z = (point1->z + point2->z) / 2;
-    return midpoint;
-}
-
-void send_control_data(OS_Socket_Handle_t sock, struct ControlData data) {
-    // Serialize the struct into a byte stream
-    char buffer[sizeof(struct ControlData)];
-    memcpy(buffer, &data, sizeof(struct ControlData));
-
-    // Send the byte stream
-     size_t n;
-    OS_Socket_write(sock, buffer, sizeof(buffer), &n);
-}
-void send_parameters(OS_Socket_Handle_t sock, float throttle, float steer, float brake, int reverse, float time) {
-    struct ControlData data;
-    data.throttle = throttle;
-    data.steer = steer;
-    data.brake = brake;
-    data.reverse = reverse;
-    data.time = time;
-
-    send_control_data(sock, data);
-}
-
-void park() {
+void park(OS_Socket_Handle_t sock) {
     printf("Parking initiated\n");
     // lane change
     send_parameters(sock,0.4, 0.3, 0,0, 3.35);
     send_parameters(sock,0.4, -0.3, 0,0, 1.65);
     send_parameters(sock,0.0, 0.0, 1.0,0, 2);
-    double dist = lastDetectedVehicle.mainVehiclePosition.x - midpoint.x;
-    double time = predict_power(dist);
+
+    //move to parking place
+    
+    //double dist = lastDetectedVehicle.mainVehiclePosition.x - midpoint.x;
+    double dist1 = lastDetectedVehicle.mainVehiclePosition.x -lastDetectedVehicle.OtherVehiclePosition.x;
+    double time = predict_power(dist1);
+
     printf("Distance: %f, Time: %f\n", dist, time);
-    send_parameters(sock,0.4, 0.0, 0.0,1, time - 5.25);
+    send_parameters(sock,0.4, 0.0, 0.0,1, time);
+    //send_parameters(sock,0.4, 0.0, 0.0,1, time - 5.25);
+
+
+
     // initiate the parking process
     send_parameters(sock,0.0, 0.0, 1.0,0, 2);
 
@@ -133,8 +60,6 @@ void park() {
     send_parameters(sock,0.2, -0.6, 0.0,1, 2.25);
 
     send_parameters(sock,0.0, 0.0, 1.0,0, 5);
-
-
 
 }
 
@@ -189,7 +114,6 @@ void checkForParking() {
 
     }
 }
-
 
 void process_buffer(char* buffer, ssize_t size) {
     int start = 0;
@@ -251,147 +175,6 @@ void process_buffer(char* buffer, ssize_t size) {
     }
 }
 
-
-
-//----------------------------------------------------------------------
-// Network
-//----------------------------------------------------------------------
-
-static const if_OS_Socket_t networkStackCtx =
-    IF_OS_SOCKET_ASSIGN(networkStack);
-
-//------------------------------------------------------------------------------
-static OS_Error_t
-waitForNetworkStackInit(
-    const if_OS_Socket_t* const ctx)
-{
-    OS_NetworkStack_State_t networkStackState;
-
-    for (;;)
-    {
-        networkStackState = OS_Socket_getStatus(ctx);
-        if (networkStackState == RUNNING)
-        {
-            // NetworkStack up and running.
-            return OS_SUCCESS;
-        }
-        else if (networkStackState == FATAL_ERROR)
-        {
-            // NetworkStack will not come up.
-            Debug_LOG_ERROR("A FATAL_ERROR occurred in the Network Stack component.");
-            return OS_ERROR_ABORTED;
-        }
-
-        // Yield to wait until the stack is up and running.
-        seL4_Yield();
-    }
-}
-
-static OS_Error_t
-waitForConnectionEstablished(
-    const int handleId)
-{
-    OS_Error_t ret;
-
-    // Wait for the event letting us know that the connection was successfully
-    // established.
-    for (;;)
-    {
-        ret = OS_Socket_wait(&networkStackCtx);
-        if (ret != OS_SUCCESS)
-        {
-            Debug_LOG_ERROR("OS_Socket_wait() failed, code %d", ret);
-            break;
-        }
-
-        char evtBuffer[128];
-        const size_t evtBufferSize = sizeof(evtBuffer);
-        int numberOfSocketsWithEvents;
-
-        ret = OS_Socket_getPendingEvents(
-                  &networkStackCtx,
-                  evtBuffer,
-                  evtBufferSize,
-                  &numberOfSocketsWithEvents);
-        if (ret != OS_SUCCESS)
-        {
-            Debug_LOG_ERROR("OS_Socket_getPendingEvents() failed, code %d",
-                            ret);
-            break;
-        }
-
-        if (numberOfSocketsWithEvents == 0)
-        {
-            Debug_LOG_TRACE("OS_Socket_getPendingEvents() returned "
-                            "without any pending events");
-            continue;
-        }
-
-        // We only opened one socket, so if we get more events, this is not ok.
-        if (numberOfSocketsWithEvents != 1)
-        {
-            Debug_LOG_ERROR("OS_Socket_getPendingEvents() returned with "
-                            "unexpected #events: %d", numberOfSocketsWithEvents);
-            ret = OS_ERROR_INVALID_STATE;
-            break;
-        }
-
-        OS_Socket_Evt_t event;
-        memcpy(&event, evtBuffer, sizeof(event));
-
-        if (event.socketHandle != handleId)
-        {
-            Debug_LOG_ERROR("Unexpected handle received: %d, expected: %d",
-                            event.socketHandle, handleId);
-            ret = OS_ERROR_INVALID_HANDLE;
-            break;
-        }
-
-        // Socket has been closed by NetworkStack component.
-        if (event.eventMask & OS_SOCK_EV_FIN)
-        {
-            Debug_LOG_ERROR("OS_Socket_getPendingEvents() returned "
-                            "OS_SOCK_EV_FIN for handle: %d",
-                            event.socketHandle);
-            ret = OS_ERROR_NETWORK_CONN_REFUSED;
-            break;
-        }
-
-        // Connection successfully established.
-        if (event.eventMask & OS_SOCK_EV_CONN_EST)
-        {
-            Debug_LOG_DEBUG("OS_Socket_getPendingEvents() returned "
-                            "connection established for handle: %d",
-                            event.socketHandle);
-            ret = OS_SUCCESS;
-            break;
-        }
-
-        // Remote socket requested to be closed only valid for clients.
-        if (event.eventMask & OS_SOCK_EV_CLOSE)
-        {
-            Debug_LOG_ERROR("OS_Socket_getPendingEvents() returned "
-                            "OS_SOCK_EV_CLOSE for handle: %d",
-                            event.socketHandle);
-            ret = OS_ERROR_CONNECTION_CLOSED;
-            break;
-        }
-
-        // Error received - print error.
-        if (event.eventMask & OS_SOCK_EV_ERROR)
-        {
-            Debug_LOG_ERROR("OS_Socket_getPendingEvents() returned "
-                            "OS_SOCK_EV_ERROR for handle: %d, code: %d",
-                            event.socketHandle, event.currentError);
-            ret = event.currentError;
-            break;
-        }
-    }
-
-    return ret;
-}
-
-//------------------------------------------------------------------------------
 int run()
 {
     
@@ -474,7 +257,7 @@ int run()
 
     // initiating the parking process
 
-    park();
+    park(new_socket);
 
 
     /// there is endloss loop here

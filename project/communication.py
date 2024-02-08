@@ -9,6 +9,13 @@ import struct
 
 ControlData = namedtuple('ControlData', 'throttle steer brake reverse time')
       
+def start_server(host, port):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen(1)
+    print(f"Server listening on {host}:{port}")
+    client_socket, client_address = server_socket.accept()
+    return client_socket
 
 def send_to_server(connection_socket,data1, data2):
     data_str = b""
@@ -80,7 +87,8 @@ class ControlDataReceiver(threading.Thread):
             
 MAX_DATA_POINTS = 20
 SEND_INTERVAL = 1
-class DataSender(threading.Thread):
+
+class SensorDataSender(threading.Thread):
     def __init__(self,connection_socket, gnss_handler, radar_handler):
         super().__init__()
         self.connection_socket = connection_socket

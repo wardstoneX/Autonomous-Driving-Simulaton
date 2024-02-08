@@ -4,7 +4,7 @@ from collections import namedtuple
 import time
 from scenario import ScenarioSetup
 from arg_parser import parse_arguments
-from communication import ControlDataReceiver,  DataSender
+from communication import ControlDataReceiver,  SensorDataSender, start_server
 from utils import GNSSHandler, RadarHandler
 
 args = parse_arguments()
@@ -16,22 +16,10 @@ port_simulator = args.portsimulator
 map = args.map
 
 
-import socket
-
-def start_server(host, port):
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((host, port))
-    server_socket.listen(1)
-    print(f"Server listening on {host}:{port}")
-    client_socket, client_address = server_socket.accept()
-    return client_socket
-
 try:
     # !!! call setup_crypto_config here !!! #
     gnss_handler = GNSSHandler()
     radar_handler = RadarHandler()
-    
-    #connection_socket = connect_to_server(HOST,PORT)
     connection_socket = start_server(HOST,PORT)
     
     scenario = ScenarioSetup(host_simulator, port_simulator, gnss_handler,radar_handler)
@@ -39,7 +27,7 @@ try:
     scenario.setup_vehicles()
     scenario.sensor_setup()
     
-    data_sender = DataSender(connection_socket, gnss_handler, radar_handler)
+    data_sender = SensorDataSender(connection_socket, gnss_handler, radar_handler)
     receiver = ControlDataReceiver(connection_socket)
     
     time.sleep(5)
@@ -62,20 +50,20 @@ try:
                 print("Stop event received.")
                 break
                 
+            
             if control_data.time > 0:
-                print(f"Sleeping for {control_data.time} seconds.")
                 time.sleep(control_data.time)
-                print("Applying brake.") # this might be unnecessary
                 scenario.main_vehicle.apply_control(carla.VehicleControl(throttle=0,
                                                            steer=0,
                                                            brake=1))
+    
 
 finally:
     print("Cleaning up...")
     receiver.stop_thread()
-    time.sleep(2)
+    time.sleep(1)
     data_sender.stop_thread()
-    time.sleep(2)
+    time.sleep(1)
 
     scenario.clean_up()
     time.sleep(3)
