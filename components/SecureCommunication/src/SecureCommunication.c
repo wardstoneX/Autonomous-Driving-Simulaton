@@ -265,47 +265,17 @@ secureCommunication_rpc_socket_read(
     uint8_t* position = buf;
     size_t read = 0;
 
-    do {
-        seL4_Yield();
-        ret = OS_Socket_read(apiHandle, position, sizeof(buf) - (position - buf), &read);
+    ret = OS_Socket_read(apiHandle, position, sizeof(buf) - (position - buf), &read);
+    if(ret == OS_SUCCESS) {
+        Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
+    } else {
+        read = 0;
+        memcpy(pLen, &read, sizeof(*pLen));
+        return ret;
+    }
 
-        //Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
-
-        switch (ret)
-        {
-        case OS_SUCCESS:
-            position = &position[read];
-            break;
-        case OS_ERROR_TRY_AGAIN:
-            //Debug_LOG_WARNING("OS_Socket_read() reported try again");
-            continue;
-        case OS_ERROR_CONNECTION_CLOSED:
-            Debug_LOG_WARNING("connection closed");
-            read = 0;
-            /*
-            memmove(pLen, &read, sizeof(*pLen));
-            return ret;
-            */
-        case OS_ERROR_NETWORK_CONN_SHUTDOWN:
-            Debug_LOG_WARNING("connection shut down");
-            read = 0;
-            /*
-            memmove(pLen, &read, sizeof(*pLen));
-            return ret;
-            */
-        default:
-            Debug_LOG_ERROR("Message retrieval failed while reading, "
-                            "OS_Socket_read() returned error code %d, bytes read %zu",
-                            ret, (size_t) (position - buf));
-            read = 0;
-            /*
-            memmove(pLen, &read, sizeof(*pLen));
-            return ret;
-            */
-        }
-    } while (read > 0 || ret == OS_ERROR_TRY_AGAIN);
-
-    actualLen = position - buf;
+    //actualLen = position - buf;
+    actualLen = read;
     Debug_LOG_INFO("GOT %d BYTES OF CIPHERTEXT", actualLen);
 
     if(actualLen < 12) {
