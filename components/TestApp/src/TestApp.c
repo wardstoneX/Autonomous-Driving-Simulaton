@@ -186,16 +186,18 @@ int run()
     Debug_LOG_INFO("sending an unencrypted message to python dummyserver");
 
     OS_Socket_Handle_t hSocket;
-    ret = OS_Socket_create(
-              &networkStackCtx,
-              &hSocket,
-              OS_AF_INET,
-              OS_SOCK_STREAM);
-    if (ret != OS_SUCCESS)
-    {
-        Debug_LOG_ERROR("OS_Socket_create() failed, code %d", ret);
-        return -1;
-    }
+    do{
+        ret = OS_Socket_create(
+                &networkStackCtx,
+                &hSocket,
+                OS_AF_INET,
+                OS_SOCK_STREAM);
+        if (ret != OS_SUCCESS)
+        {
+            Debug_LOG_ERROR("OS_Socket_create() failed, code %d", ret);
+            return -1;
+        }
+    } while(ret!=OS_SUCCESS);
 
     const OS_Socket_Addr_t dstAddr =
     {

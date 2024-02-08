@@ -41,7 +41,7 @@ def setup_crypto_config():
 
             #5.- generate K_sym and encrypt: ciphertext = encrypt(EK_pub, encrypt(SRK_pub, K_sym))
             global K_sym
-#            K_sym = Random.get_random_bytes(32)
+#           K_sym = Random.get_random_bytes(32)
             K_sym = bytes([ i for i in range(0,32)])
 
             print(f"Generated key: {K_sym}")
@@ -54,8 +54,10 @@ def setup_crypto_config():
             #6.- send ciphertext to app
             conn.sendall(ciphertext)
             print("key sent")
+        '''
         s.shutdown(socket.SHUT_RDWR)
         s.close()
+        '''
 
 
 
@@ -71,44 +73,33 @@ def send_encrypt(connection, data):
     payload = nonce + ciphertext
     connection.sendall(payload)
 
-    '''
-    cipher = Cipher(algorithms.AES(key), modes.GCM(iv))
-    encryptor = cipher.encryptor()
-    ciphertext = encryptor.update(data) + encryptor.finalize()
-    connection.sendall(ciphertext)
-    '''
-
 def recv_decrypt(connection):
     data = connection.recv(1024)
     nonce = data[0:12]
-    cipher = AES.new(K_sym, AES.Mode_GCM, nonce)
+    cipher = AES.new(K_sym, AES.MODE_GCM, nonce)
     return cipher.decrypt(data[12:])
-
-    '''
-    cipher = Cipher(algorithms.AES(key), modes.GCM(iv))
-    decryptor = cipher.decryptor()
-    return decryptor.update(ciphertext) + decryptor.finalize()
-    '''
 
 
 
 
 #DUMMY SERVER IS HERE
 print("python dummy server is running")
-setup_crypto_config()
-print("key exchange was successful")
-#any other code using send_encrypt() or recv_decrypt() should be sent after calling setup_crypto_config()
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((HOST, COMM_PORT))
-        s.listen()
-        conn, addr = s.accept()
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s_comm:
+        s_comm.bind((HOST, COMM_PORT))
+        s_comm.listen()
+
+        setup_crypto_config()
+        print("key exchange was successful")
+        #any other code using send_encrypt() or recv_decrypt() should be sent after calling setup_crypto_config()
+        
+        conn, addr = s_comm.accept()
         with conn:
             print(f"Connected by {addr}")
-            data = conn.recv(1024)
+            data = recv_decrypt(conn)
             print(f"Received the following message: {data}")
             print(f"Sending back a message")
             #TODO: try to send more data, less data, and data in parts
-            conn.sendall(b"Hi TestApp!!")
+            send_encrypt(conn, b"Hi TestApp!!")
             print(f"Reply sent")
 
 

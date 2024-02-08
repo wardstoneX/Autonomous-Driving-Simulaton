@@ -77,6 +77,10 @@ uint32_t decrypt(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t* ciphert
         Debug_LOG_ERROR("The provided buffer is too small: it is %d bytes, has to be at least %d bytes", plaintextLen, ciphertextLen - 12);
         return -1;
     }
+    if(ciphertextLen<12) {
+        Debug_LOG_ERROR("The ciphertext is too short: decryption expects 12 bytes of IV but the length of the ciphertext is %d", ciphertextLen);
+        return -1;
+    }
 
     uint8_t iv[12];
     memcpy(iv, ciphertext, 12);
@@ -111,7 +115,7 @@ uint32_t decrypt(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t* ciphert
     OS_CryptoCipher_process(hCipher, ciphertext+12, ciphertextLen-12, plaintext, &outputSize);
 
     if(outputSize != ciphertextLen - 12) {
-        Debug_LOG_ERROR("Only %d of %d bytes were encrypted successfully", outputSize, ciphertextLen - 12);
+        Debug_LOG_ERROR("Only %d of %d bytes were decrypted successfully", outputSize, ciphertextLen - 12);
         return -1;
     }
     Debug_LOG_INFO("DUMPING PLAINTEXT");

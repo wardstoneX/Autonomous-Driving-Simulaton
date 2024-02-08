@@ -104,12 +104,14 @@ secureCommunication_rpc_socket_create(
 )
 {
     if(!is_initialized){
+        Debug_LOG_INFO("STARTING KEY EXCHANGE");
         is_initialized = exchange_keys() == OS_SUCCESS;
         if (!is_initialized) {
             Debug_LOG_ERROR("KEy exchange failed, aborting");
             exit(1);
         }
     }
+    Debug_LOG_INFO("KEY EXCHANGE COMPLETED");
     CHECK_IS_RUNNING(OS_Socket_getStatus(&networkStackCtx));
 
     OS_Socket_Handle_t apiHandle = {.ctx = networkStackCtx, .handleID = *pHandle};
@@ -252,8 +254,90 @@ secureCommunication_rpc_socket_read(
     size_t* const   pLen
 )
 {
-    Debug_LOG_WARNING("read() is not implemented in the SecureCommunication component, use recvfrom() instead.");
-    return OS_ERROR_NOT_IMPLEMENTED;
+    OS_Error_t ret;
+    CHECK_IS_RUNNING(OS_Socket_getStatus(&networkStackCtx));
+
+    OS_Socket_Handle_t apiHandle = {.ctx = networkStackCtx, .handleID = handle};
+    uint8_t buf[OS_DATAPORT_DEFAULT_SIZE];
+    uint8_t plaintext[OS_DATAPORT_DEFAULT_SIZE];
+    size_t actualLen;
+    
+    uint8_t* position = buf;
+    size_t read = 0;
+
+    do {
+        seL4_Yield();
+        ret = OS_Socket_read(apiHandle, position, sizeof(buf) - (position - buf), &read);
+
+        Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
+
+        switch (ret)
+        {
+        case OS_SUCCESS:
+            position = &position[read];
+            break;
+        case OS_ERROR_TRY_AGAIN:
+            Debug_LOG_WARNING("OS_Socket_read() reported try again");
+            continue;
+        case OS_ERROR_CONNECTION_CLOSED:
+            Debug_LOG_WARNING("connection closed");
+            read = 0;
+            /*
+            memmove(pLen, &read, sizeof(*pLen));
+            return ret;
+            */
+        case OS_ERROR_NETWORK_CONN_SHUTDOWN:
+            Debug_LOG_WARNING("connection shut down");
+            read = 0;
+            /*
+            memmove(pLen, &read, sizeof(*pLen));
+            return ret;
+            */
+        default:
+            Debug_LOG_ERROR("Message retrieval failed while reading, "
+                            "OS_Socket_read() returned error code %d, bytes read %zu",
+                            ret, (size_t) (position - buf));
+            read = 0;
+            /*
+            memmove(pLen, &read, sizeof(*pLen));
+            return ret;
+            */
+        }
+    } while (read > 0 || ret == OS_ERROR_TRY_AGAIN);
+
+    actualLen = position - buf;
+    Debug_LOG_INFO("GOT %d BYTES OF CIPHERTEXT", actualLen);
+
+    if(actualLen < 12) {
+        Debug_LOG_ERROR("Not enough bytes were read, read operation unsuccessful");
+        actualLen = 0;
+        memcpy(pLen, &actualLen, sizeof(*pLen));
+        return -1;
+    }
+
+    uint8_t* K_sym = malloc(32);
+    uint32_t keyLen = 32;
+    if(keystore.loadKey(hStoredKey, &keyLen) != 0 || keyLen != 32) {
+        Debug_LOG_ERROR("There was an error when loading the symmetric key for encryption");
+        actualLen = 0;
+        memcpy(pLen, &actualLen, sizeof(*pLen));
+        return -1;
+
+    }
+    memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
+
+    if(decrypt(hCrypto, K_sym, buf, actualLen, plaintext, sizeof(plaintext)) != 0) {
+        Debug_LOG_ERROR("There was an error when decrypting the received message");
+        actualLen = 0;
+        memcpy(pLen, &actualLen, sizeof(*pLen));
+        return -1;
+    }
+
+    actualLen -= 12;
+    memmove(secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), plaintext, actualLen);
+    memmove(pLen, &actualLen, sizeof(*pLen));
+    //NOTE: the Socket API only copies the data in the dataport if the return code is OS_SUCCESS
+    return OS_SUCCESS;
 }
 
 
@@ -281,8 +365,8 @@ secureCommunication_rpc_socket_recvfrom(
     CHECK_IS_RUNNING(OS_Socket_getStatus(&networkStackCtx));
 
     OS_Socket_Handle_t apiHandle = {.ctx = networkStackCtx, .handleID = handle};
-    static char buf[OS_DATAPORT_DEFAULT_SIZE];
-    //uint8_t dec_text[OS_DATAPORT_DEFAULT_SIZE];
+    uint8_t buf[OS_DATAPORT_DEFAULT_SIZE];
+    uint8_t plaintext[OS_DATAPORT_DEFAULT_SIZE];
     size_t actualLen;
     
 
@@ -292,7 +376,7 @@ secureCommunication_rpc_socket_recvfrom(
      * Therefore, the call we make to the network stack is OS_Socket_read() instead of _recvfrom()
      * because _recvfrom() would expect a socket of type DGRAM (used for UDP connections)
      */
-    char* position = buf;
+    uint8_t* position = buf;
     size_t read = 0;
 
     do {
@@ -312,62 +396,59 @@ secureCommunication_rpc_socket_recvfrom(
         case OS_ERROR_CONNECTION_CLOSED:
             Debug_LOG_WARNING("connection closed");
             read = 0;
+            /*
             memmove(pLen, &read, sizeof(*pLen));
             return ret;
+            */
         case OS_ERROR_NETWORK_CONN_SHUTDOWN:
             Debug_LOG_WARNING("connection shut down");
             read = 0;
+            /*
             memmove(pLen, &read, sizeof(*pLen));
             return ret;
+            */
         default:
             Debug_LOG_ERROR("Message retrieval failed while reading, "
                             "OS_Socket_read() returned error code %d, bytes read %zu",
                             ret, (size_t) (position - buf));
             read = 0;
+            /*
             memmove(pLen, &read, sizeof(*pLen));
             return ret;
+            */
         }
     } while (read > 0 || ret == OS_ERROR_TRY_AGAIN);
 
-    //TODO: erase this line before reactivating decryption
     actualLen = position - buf;
+    Debug_LOG_INFO("GOT %d BYTES OF CIPHERTEXT", actualLen);
 
-
-/*DECRYPTING DATA*/
-    /*
-    printf("Decrypting String.\n");
-
-    OS_CryptoKey_Data_t key_data;
-    size_t key_size;
-    OS_CryptoKey_Handle_t hKey;
-    if((ret = OS_Keystore_loadKey(hKeys, "symmetric key", &key_data, &key_size)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Failed to retrieve key from keystore, err: %d", ret);
-    }
-    if((ret = OS_CryptoKey_import(&hKey, hCrypto, &key_data)) != OS_SUCCESS) {
-        Debug_LOG_WARNING("Failed to import data into key object, err: %d", ret);
+    if(actualLen < 12) {
+        Debug_LOG_ERROR("Not enough bytes were read, read operation unsuccessful");
+        actualLen = 0;
+        memcpy(pLen, &actualLen, sizeof(*pLen));
+        return -1;
     }
 
-    // Create a cipher object to decrypt data with AES-GCM (does require an IV!)
-    OS_CryptoCipher_Handle_t hCipher;
-    OS_CryptoCipher_init(&hCipher,
-                        hCrypto,
-                        hKey,
-                        OS_CryptoCipher_ALG_AES_GCM_DEC,
-                        iv,
-                        iv_size);
+    uint8_t* K_sym = malloc(32);
+    uint32_t keyLen = 32;
+    if(keystore.loadKey(hStoredKey, &keyLen) != 0 || keyLen != 32) {
+        Debug_LOG_ERROR("There was an error when loading the symmetric key for encryption");
+        actualLen = 0;
+        memcpy(pLen, &actualLen, sizeof(*pLen));
+        return -1;
 
-    // Start computation for the AES-GCM
-    OS_CryptoCipher_start(hCipher, NULL, 0);
+    }
+    memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
 
-    size_t dec_text_size = actualLen;
-    // Decrypt loaded String
-    OS_CryptoCipher_process(hCipher, buf, actualLen, dec_text, &dec_text_size);
+    if(decrypt(hCrypto, K_sym, buf, actualLen, plaintext, sizeof(plaintext)) != 0) {
+        Debug_LOG_ERROR("There was an error when decrypting the received message");
+        actualLen = 0;
+        memcpy(pLen, &actualLen, sizeof(*pLen));
+        return -1;
+    }
 
-    printf("%ls of %d bytes decrypted successfully.", &dec_text_size, actualLen);
-    printf("Decrypted text: %s.\n", dec_text);
-    */
-
-    memmove(secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), buf, actualLen);
+    actualLen -= 12;
+    memmove(secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), plaintext, actualLen);
     memmove(pLen, &actualLen, sizeof(*pLen));
     //NOTE: the Socket API only copies the data in the dataport if the return code is OS_SUCCESS
     return OS_SUCCESS;
@@ -641,6 +722,11 @@ static OS_Error_t exchange_keys(void) {
     Debug_LOG_INFO("dumping key loaded back from TPM");
     Debug_DUMP_INFO(K_sym, 32);
     /*end of debug*/
+
+    ret = OS_Socket_close(hSocket);
+    if(ret != OS_SUCCESS) {
+        Debug_LOG_INFO("Failed to close socket after key exchange");
+    }
 
 
      
