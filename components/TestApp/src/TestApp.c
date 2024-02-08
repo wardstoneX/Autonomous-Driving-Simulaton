@@ -91,7 +91,7 @@ void checkForParking() {
         }
 
         float distance = calculateEuclideanDistance(&lastDetectedVehicle.OtherVehiclePosition, radarDetection);
-        //printf("Distance: %f\n", distance);
+        printf("Distance: %f\n", distance);
         if (distance > 4.0) {
             if (distance > 12) {
                 printf("Park spot found\n");
@@ -147,7 +147,7 @@ void process_buffer(char* buffer, ssize_t size) {
 
             struct Tuple radar, gnss;
             sscanf(data, "%f,%f,%f-%f,%f,%f", &radar.x, &radar.y, &radar.z, &gnss.x, &gnss.y, &gnss.z);
-            //printf(" GNSS: (%f, %f, %f)\n", gnss.x, gnss.y, gnss.z);
+            printf(" GNSS: (%f, %f, %f)\n", gnss.x, gnss.y, gnss.z);
 
             scv_push_back(vector_radar, &radar);
             scv_push_back(vector, &gnss);
@@ -236,6 +236,7 @@ int run()
         ret = OS_Socket_read(new_socket, buffer, sizeof(buffer) - 1, &valread);
         
         if (valread > 0) {
+            printf("Read %d bytes \n", valread);
             char temp[sizeof(buffer) + leftover_size];
             if (leftover_size > 0) {
                 memcpy(temp, leftover, leftover_size);

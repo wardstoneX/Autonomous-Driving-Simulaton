@@ -269,7 +269,7 @@ secureCommunication_rpc_socket_read(
         seL4_Yield();
         ret = OS_Socket_read(apiHandle, position, sizeof(buf) - (position - buf), &read);
 
-        Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
+        //Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
 
         switch (ret)
         {
@@ -277,7 +277,7 @@ secureCommunication_rpc_socket_read(
             position = &position[read];
             break;
         case OS_ERROR_TRY_AGAIN:
-            Debug_LOG_WARNING("OS_Socket_read() reported try again");
+            //Debug_LOG_WARNING("OS_Socket_read() reported try again");
             continue;
         case OS_ERROR_CONNECTION_CLOSED:
             Debug_LOG_WARNING("connection closed");
