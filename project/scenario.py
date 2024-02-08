@@ -15,7 +15,7 @@ class ScenarioSetup():
     ROLL = 0.0
     X_OFFSETS = [0, 5, 12, 20, 25, 33, 48, 55]
     
-    def __init__(self, host_simulator, port_simulator, gnss_handler, radar_handler):
+    def __init__(self, host_simulator, port_simulator, gnss_handler, radar_handler, simulator_scenario):
         self.client = carla.Client(host_simulator, port_simulator)
         self.world = self.client.get_world()
         self.map_name = self.world.get_map().name
@@ -26,6 +26,8 @@ class ScenarioSetup():
         self.main_vehicle = None
         self.sensors = []
         self.vehicles = []
+        # its an array of x coordinates
+        self.simulator_scenario = simulator_scenario
     
       
        
@@ -85,7 +87,7 @@ class ScenarioSetup():
         print(f"Spectator Transform set to {transform}.")
         
         print("Setting up vehicles on the side of the road...")
-        for x_offset in self.X_OFFSETS:
+        for x_offset in self.simulator_scenario:
             transform = carla.Transform(
             carla.Location(x=self.X_POSITION + x_offset, y=self.Y3_POSITION, z=self.Z_POSITION),
             carla.Rotation(pitch=self.PITCH, yaw=self.YAW, roll=self.ROLL)

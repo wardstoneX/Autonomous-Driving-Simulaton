@@ -12,5 +12,6 @@ def parse_arguments():
     parser.add_argument('-hsim', '--hostsimulator', type=str, default='localhost', help='Simulator Host (default: localhost)')
     parser.add_argument('-ps', '--portsimulator', type=int, default=2000, help='Simulator Port (default: 2000)')
     parser.add_argument('-m', '--map', type=str, default='Town06', help='Simulator Map (default: Town06)')
+    parser.add_argument('-s', '--scenario', type=str, default='default_scenario.txt', help='Simulator scenario (default: default_scenaro.txt)')
 
     return parser.parse_args()

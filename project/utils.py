@@ -7,6 +7,15 @@ import math
 import carla            
 
 
+
+
+def read_offsets_from_file(filename):
+    with open(filename, 'r') as f:
+        line = f.readline()
+        offsets = list(map(int, line.split('-')))
+    return offsets
+
+
 # The (modified) method is taken from this repository:
 # https://github.com/autonomousvision/carla_garage/
 def convert_gps_to_carla(gnss_measurement):

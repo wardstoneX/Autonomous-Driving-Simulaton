@@ -5,7 +5,7 @@ import time
 from scenario import ScenarioSetup
 from arg_parser import parse_arguments
 from communication import ControlDataReceiver,  SensorDataSender, start_server
-from utils import GNSSHandler, RadarHandler
+from utils import GNSSHandler, RadarHandler, read_offsets_from_file
 
 args = parse_arguments()
 
@@ -14,21 +14,26 @@ PORT = args.port
 host_simulator = args.hostsimulator
 port_simulator = args.portsimulator
 map = args.map
+scenario_file = args.scenario
+simulator_scenario = read_offsets_from_file("scenarios/" + scenario_file)
 
+gnss_handler = GNSSHandler()
+radar_handler = RadarHandler()
+connection_socket = start_server(HOST,PORT)
+data_sender = SensorDataSender(connection_socket, gnss_handler, radar_handler)
+receiver = ControlDataReceiver(connection_socket)
 
 try:
     # !!! call setup_crypto_config here !!! #
-    gnss_handler = GNSSHandler()
-    radar_handler = RadarHandler()
-    connection_socket = start_server(HOST,PORT)
+ 
     
-    scenario = ScenarioSetup(host_simulator, port_simulator, gnss_handler,radar_handler)
+    
+    scenario = ScenarioSetup(host_simulator, port_simulator, gnss_handler,radar_handler, simulator_scenario)
     scenario.change_map(map)
     scenario.setup_vehicles()
     scenario.sensor_setup()
     
-    data_sender = SensorDataSender(connection_socket, gnss_handler, radar_handler)
-    receiver = ControlDataReceiver(connection_socket)
+   
     
     time.sleep(5)
     ## may need to add wait here
