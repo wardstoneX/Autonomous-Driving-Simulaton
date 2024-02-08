@@ -46,18 +46,15 @@ def setup_crypto_config():
 
             print(f"Generated key: {K_sym}")
 
-            cipher_EK = PKCS1_OAEP.new(EK, Crypto.Hash.SHA256)
-            cipher_SRK = PKCS1_OAEP.new(SRK, Crypto.Hash.SHA256)
+            cipher_EK = PKCS1_OAEP.new(EK, SHA256)
+            cipher_SRK = PKCS1_OAEP.new(SRK, SHA256)
+
             ciphertext = cipher_EK.encrypt(cipher_SRK.encrypt(K_sym))
             print(f"Encrypted key: {ciphertext.hex()}")
 
             #6.- send ciphertext to app
             conn.sendall(ciphertext)
             print("key sent")
-        '''
-        s.shutdown(socket.SHUT_RDWR)
-        s.close()
-        '''
 
 
 
