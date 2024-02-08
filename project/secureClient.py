@@ -2,11 +2,11 @@ import socket
 from Crypto import Random
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP, AES, PKCS1_v1_5
+from Crypto.Cipher import PKCS1_OAEP, AES
 
 HOST = "10.0.0.10"      #arbitrary, make sure to configure on the computer when running the python client
 CRYPTO_PORT = 65432     #arbitrary, add later to system_config.h
-COMM_PORT = 1234        #arbitrary, add later to system_config.h
+#COMM_PORT = 1234        #arbitrary, add later to system_config.h
 
 #please run this function before performing any secure send/recv operations
 def setup_crypto_config():

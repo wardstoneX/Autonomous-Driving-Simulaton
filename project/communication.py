@@ -5,6 +5,7 @@ import socket
 import time
 from collections import namedtuple
 import struct
+from secureClient import setup_crypto_config, send_encrypt, recv_decrypt
 
 
 ControlData = namedtuple('ControlData', 'throttle steer brake reverse time')
@@ -14,6 +15,7 @@ def start_server(host, port):
     server_socket.bind((host, port))
     server_socket.listen(1)
     print(f"Server listening on {host}:{port}")
+    setup_crypto_config()
     client_socket, client_address = server_socket.accept()
     return client_socket
 
@@ -37,9 +39,8 @@ def send_to_server(connection_socket,data1, data2):
     # !!! call send_encrypt here !!! #
     #print(f"Sending {len(data_str)} data  to server.")
     try:
-        connection_socket.sendall(data_str)     
+        send_encrypt(connection_socket, data_str)  
     except BrokenPipeError:
-        print("Client disconnected, stopping threads.")
         pass
         
 def connect_to_server(host, port):
@@ -63,7 +64,7 @@ class ControlDataReceiver(threading.Thread):
     def run(self):
         while not self.stop_event.is_set():
             # !!! call recv_decrypt here !!! #
-            data = self.connection_socket.recv(1024)
+            data = recv_decrypt(self.connection_socket)
             data = self.leftover_data + data
             self.leftover_data = b''
 
