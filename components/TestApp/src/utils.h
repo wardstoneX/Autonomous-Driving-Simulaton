@@ -56,6 +56,5 @@ void send_parameters(OS_Socket_Handle_t sock, float throttle, float steer, float
 
 const if_OS_Socket_t networkStackCtx;
 OS_Error_t waitForNetworkStackInit(const if_OS_Socket_t* const ctx);
-OS_Error_t waitForConnectionEstablished(const int handleId);
 
 #endif // UTILS_H

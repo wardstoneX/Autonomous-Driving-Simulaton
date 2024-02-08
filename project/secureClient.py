@@ -6,7 +6,6 @@ from Crypto.Cipher import PKCS1_OAEP, AES
 
 HOST = "10.0.0.10"      #arbitrary, make sure to configure on the computer when running the python client
 CRYPTO_PORT = 65432     #arbitrary, add later to system_config.h
-#COMM_PORT = 1234        #arbitrary, add later to system_config.h
 
 #please run this function before performing any secure send/recv operations
 def setup_crypto_config():
@@ -78,27 +77,6 @@ def recv_decrypt(connection):
 
 
 
-'''
-#DUMMY SERVER IS HERE
-print("python dummy server is running")
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s_comm:
-        s_comm.bind((HOST, COMM_PORT))
-        s_comm.listen()
-
-        setup_crypto_config()
-        print("key exchange was successful")
-        #any other code using send_encrypt() or recv_decrypt() should be sent after calling setup_crypto_config()
-        
-        conn, addr = s_comm.accept()
-        with conn:
-            print(f"Connected by {addr}")
-            data = recv_decrypt(conn)
-            print(f"Received the following message: {data}")
-            print(f"Sending back a message")
-            #TODO: try to send more data, less data, and data in parts
-            send_encrypt(conn, b"Hi TestApp!!")
-            print(f"Reply sent")
-'''
 
 
 

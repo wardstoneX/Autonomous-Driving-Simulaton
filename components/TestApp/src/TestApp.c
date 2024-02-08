@@ -220,13 +220,7 @@ int run()
         return ret;
     }
 
-    ret = waitForConnectionEstablished(new_socket.handleID);
-    if (ret != OS_SUCCESS)
-    {
-        Debug_LOG_ERROR("waitForConnectionEstablished() failed, error %d", ret);
-        OS_Socket_close(new_socket);
-        return -1;
-    }
+
     sock = new_socket;
     char buffer[4096] = { 0 };
     send_parameters(new_socket, 0.2, 0.0, 0.0, 0,0);
