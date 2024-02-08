@@ -78,7 +78,7 @@ def recv_decrypt(connection):
 
 
 
-
+'''
 #DUMMY SERVER IS HERE
 print("python dummy server is running")
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s_comm:
@@ -98,7 +98,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s_comm:
             #TODO: try to send more data, less data, and data in parts
             send_encrypt(conn, b"Hi TestApp!!")
             print(f"Reply sent")
-
+'''
 
 
 
