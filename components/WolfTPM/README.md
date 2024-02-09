@@ -165,18 +165,18 @@ the thread would've been aborted, so the code that invokes these functions
 would've never been reached.
 
 ```c
-uint32_t storeKey()
-int loadKey(uint32_t hdl)
+uint32_t storeKey(uint32_t len)
+int loadKey(uint32_t hdl, uint32_t *len)
 ```
 
 These functions are responsible for non-volatile storage of keys.
 
-`storeKey` takes no parameters, but expects the key in the form of a
-`struct if_KeyStore_Key` in the dataport. If successful, it returns a handle
-that can be used to load the key. If failed, it returns `(uint32_t) -1`.
+`storeKey` takes the length of the key (in bytes) as a parameter, and expects
+the raw key data in the dataport.
 
-`loadKey` takes a handle created by `storeKey`. It writes out the stored data
-from the NV into the dataport, in the form of a `struct if_KeyStore_Key`.
+`loadKey` takes a handle created by `storeKey`, and a pointer.
+It writes out the stored data from the NV into the dataport, and the length
+of the data into the `len` pointer.
 It returns `0` on success and non-zero on failure.
 
 Note that in the current implementation, the "handle" is just an offset into
