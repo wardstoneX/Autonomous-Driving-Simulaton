@@ -40,8 +40,7 @@ def setup_crypto_config():
 
             #5.- generate K_sym and encrypt: ciphertext = encrypt(EK_pub, encrypt(SRK_pub, K_sym))
             global K_sym
-#           K_sym = Random.get_random_bytes(32)
-            K_sym = bytes([ i for i in range(0,32)])
+            K_sym = Random.get_random_bytes(32)
 
             print(f"Generated key: {K_sym}")
 
@@ -75,36 +74,6 @@ def recv_decrypt(connection):
     nonce = data[0:12]
     cipher = AES.new(K_sym, AES.MODE_GCM, nonce)
     return cipher.decrypt(data[12:])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-        
-
-
-
-
-
-
-
-
-
-
 
 
 
