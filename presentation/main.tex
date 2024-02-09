@@ -1,14 +1,27 @@
 \documentclass[aspectratio=169]{beamer}
 
 % TODO: Decide on a theme that looks good
-\usetheme{Dresden}
 \usecolortheme{beaver}
+\useoutertheme[subsection=false,footline=authorinstitutetitle]{miniframes}
+\beamertemplatenavigationsymbolsempty
 
 % TODO: Better title/subtitle
 \title{Project: Autonomous Driving Simulator}
 \subtitle{Using TRENTOS, CAmkES, and TPM module}
 \author{Selim Mert Kaştan \and Alisa Parashchenko \and Mirena Flores Valdez}
 \date{13.02.2024}
+
+% Minted for nice syntax highlighting
+% Unfortunately, this requires to pass the -shell-escape option to PDFLaTeX
+\usepackage{minted}
+% Draw a box around the code
+\usepackage{mdframed}
+\BeforeBeginEnvironment{minted}{\begin{mdframed}}
+\AfterEndEnvironment{minted}{\end{mdframed}~}
+
+% Tilde that is centered, not raised
+% See: https://tex.stackexchange.com/questions/312/correctly-typesetting-a-tilde/377
+\newcommand\ttilde{\raisebox{0.5ex}{\texttildelow}}
 
 \begin{document}
 \maketitle

@@ -10,3 +10,5 @@ main.pdf
 *.snm
 *.toc
 *.log
+*.vrb
+_minted-*

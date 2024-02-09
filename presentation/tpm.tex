@@ -1,0 +1,132 @@
+\section{TPM Driver}
+
+\begin{frame}{Concept}
+\begin{itemize}
+\item WolfTPM handles the specifics of communicating with the TPM
+\item But it doesn't know how to do input/output on TRENTOS
+  \begin{itemize}
+  \item[$\Rightarrow$] Need to add custom I/O function to the HAL (``Hardware Abstraction Layer'')
+  \item Custom I/O wrapper actually just a thin wrapper around the BCM2837 library
+  \end{itemize}
+\item It also doesn't have a CAmkES interface that would let it talk to other TRENTOS components
+  \begin{itemize}
+  \item[$\Rightarrow$] That's what our custom interfaces are for
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Custom Interfaces}
+\begin{itemize}
+\item Larger data, e.g. keys or encrypted text, get passed over the dataport
+\item Functions only take the parameters needed to process the data
+\item[$+$] No additional buffer needed inside \texttt{trentos.c}\\
+    Dataport pointer can immediately be passed to WolfTPM
+\item[$+$] Avoids unnecessary copying of data
+\item[$-$] Dataport doesn't show up in function signature
+\item[$-$] Programmer of the client must remember to copy data out when it would otherwise be overwritten
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Custom Interfaces}
+\texttt{if\_KeyStore}: Functions for getting or storing keys
+
+%/* Functions to get cEK and cSRK */
+%/* Functions to store or get any other key */
+\begin{minted}{c}
+void     getCEK_RSA2048(uint32_t *exp);
+void     getCSRK_RSA1024(uint32_t *exp);
+uint32_t storeKey(uint32_t keyLen);
+int      loadKey(uint32_t hdl, uint32_t *keyLen);
+\end{minted}
+
+Note:
+\begin{itemize}
+\item Nothing requires the data that's stored to actually be a key
+\item ``Handle'' actually just an offset, no validity checks
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Custom Interfaces}
+\texttt{if\_Crypto}: Functions for encryption and decryption
+
+\begin{minted}{c}
+int decrypt_RSA_OAEP(int key, int *len);
+int encrypt_RSA_OAEP(int key, int *len);
+\end{minted}
+
+Note that this signature allows to call multiple decryption operations after each other!
+
+\begin{minted}{c}
+crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CEK, &len);
+crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CSRK, &len);
+\end{minted}
+\end{frame}
+
+\begin{frame}{Initialization}
+\begin{itemize}
+\item Upon component startup, \texttt{pre\_init()} gets called
+\item Also possible to define component-specific init functions and \texttt{post\_init()}, but not needed for this implementation
+\end{itemize}
+
+Our \texttt{pre\_init()} function:
+
+\begin{enumerate}
+\item Initializes BCM2837 SPI with correct parameters (MSB first, CS1, 31.25 MHz)
+\item Pulls $\overline{\mbox{RESET}}$ pin low
+\item Generates real SRK (needed for generation of other keys and for NV storage)
+\item Loads cEK into TPM\ldots
+\item Generates cSRK
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{Loading cEK}
+Problem:
+\begin{itemize}
+\item First run of the code must save cEK into TPM
+\item Python client also must receive the cEK, for verification
+\item Subsequent runs must load this cEK, not generate a new one!
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Loading cEK}
+How to determine whether cEK already exists?
+\begin{itemize}
+\item \texttt{pre\_init()} tries to open NV storage
+\end{itemize}
+
+If it succeeds:
+\begin{itemize}
+\item Read the cEK from NV storage into a \texttt{WOLFTPM2\_KEYBLOB} struct
+\item Load the cEK into TPM main memory
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Loading cEK}
+If it fails:
+
+\begin{itemize}
+\item Generate new cEK (as a \texttt{WOLFTPM2\_KEYBLOB} struct)
+\item Store the struct it in the NVRAM of the TPM
+\item Print a hexdump of the new key and exit
+\item Python client can import cEK using \texttt{importEK.py}
+\end{itemize}
+
+How to clear TPM and re-create cEK on purpose?
+
+\begin{itemize}
+\item Define \texttt{CLEAR\_TPM} and re-compile
+\item That will clear the TPM and re-create the key
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Loading cEK}
+Additional difficulty: a \texttt{WOLFTPM2\_KEYBLOB} is too large!
+
+\begin{itemize}
+\item One NV index can only store 2048 bytes
+\item Somehow, \texttt{sizeof(WOLFTPM\_KEYBLOB)} is \ttilde{}2300 bytes!
+\item[$\Rightarrow$] Our solution: use two NV indices
+\item[$\Rightarrow$] Better solution would've been to find out why that struct is wasting so much space
+\item[$\Rightarrow$] Time constraints made us choose worse solution\ldots
+\end{itemize}
+\end{frame}

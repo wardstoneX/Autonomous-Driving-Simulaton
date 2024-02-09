@@ -22,6 +22,10 @@
   return b; \
 }
 
+/* One NV index can be at most 2048 bytes large on this TPM
+ * Somehow, a WOLFTPM_KEYBLOB structure is ~2300 bytes
+ * Thus, we need two NV indices to store the EK...
+ */
 #define NV_MAX_SIZE 2048
 #define NV_INDEX_1 TPM_20_OWNER_NV_SPACE
 #define NV_INDEX_2 NV_INDEX_1 + NV_MAX_SIZE
