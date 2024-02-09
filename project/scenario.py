@@ -1,7 +1,9 @@
 
 import time
 import carla
-
+from communication import SensorDataSender, ControlDataReceiver, start_server
+from utils import GNSSHandler, RadarHandler, read_offsets_from_file
+from arg_parser import parse_arguments
 
 ## it might be necessary to add timeouts while setting up stuff
 class ScenarioSetup():
@@ -11,36 +13,74 @@ class ScenarioSetup():
     X_POSITION = 106
     Z_POSITION = 0.3
     PITCH = 0.0
-    YAW = 0.02  #0.019546 
+    YAW = 0.02  
     ROLL = 0.0
     X_OFFSETS = [0, 5, 12, 20, 25, 33, 48, 55]
     
-    def __init__(self, host_simulator, port_simulator, gnss_handler, radar_handler, simulator_scenario):
-        self.client = carla.Client(host_simulator, port_simulator)
+    def __init__(self):
+        self.args = parse_arguments()
+        self.hostsimulator = self.args.hostsimulator
+        self.portsimulator = self.args.portsimulator
+        self.map = self.args.map
+        self.hostserver = self.args.hostserver
+        self.portserver = self.args.portserver
+        self.scenario_file = self.args.scenario
+        
+        self.client = carla.Client(self.hostsimulator, self.portsimulator)
         self.world = self.client.get_world()
         self.map_name = self.world.get_map().name
         self.blueprint_library = self.world.get_blueprint_library()
         self.vehicle_blueprint = self.blueprint_library.filter('model3')[0]
-        self.gnss_handler = gnss_handler
-        self.radar_handler = radar_handler
         self.main_vehicle = None
         self.sensors = []
         self.vehicles = []
-        # its an array of x coordinates
-        self.simulator_scenario = simulator_scenario
-    
-      
-       
-
+        
+        self.simulator_scenario = read_offsets_from_file("scenarios/" + self.scenario_file)
+        
+        
+        self.connection_socket = start_server(self.hostserver, self.portserver)
+        self.gnss_handler = GNSSHandler()
+        self.radar_handler = RadarHandler()
+        self.sensor_data_sender = SensorDataSender(self.connection_socket, self.gnss_handler, self.radar_handler)
+        self.control_data_receiver = ControlDataReceiver(self.connection_socket)
+        
+    def initialize_scenario(self):
+        self.change_map(self.map)
+        self.setup_vehicles()
+        self.sensor_setup()
+        self.start_threads()    
+        
     def get_world(self):
         return self.world
     
     def clean_up(self):
+        print("Cleaning up...")
+        self.sensor_data_sender.stop_thread()
+        time.sleep(1)
+        self.control_data_receiver.stop_thread()
+        time.sleep(1)
+        
         for actor in self.sensors:
             actor.destroy()
         for actor in self.vehicles:
             actor.destroy()
-    
+        time.sleep(2)    
+    def start_threads(self):
+        # i dont know about the wait here
+        time.sleep(3)
+        self.sensor_data_sender.start()
+        self.control_data_receiver.start()
+        
+    def apply_control(self, control_data):
+        self.main_vehicle.apply_control(carla.VehicleControl(throttle=control_data.throttle,
+                                                       steer=control_data.steer,
+                                                       brake=control_data.brake,
+                                                       reverse=control_data.reverse))  
+    def brake(self):
+        self.main_vehicle.apply_control(carla.VehicleControl(throttle=0,
+                                                       steer=0,
+                                                       brake=1))    
+          
     def change_map(self, map_name):
         if map_name != 'Town06':
             raise ValueError("Invalid map name. Only 'Town06' is supported.")
