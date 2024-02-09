@@ -31,11 +31,10 @@ NetworkStack_PicoTcp_DeclareCAmkESComponent(
 DeclareCAmkESComponent(
     SecureCommunication
     INCLUDES
-        helpers
         interfaces/headers
     SOURCES
         components/SecureCommunication/src/SecureCommunication.c
-        helpers/sc_helpers.c
+        components/SecureCommunication/src/sc_helpers.c
     C_FLAGS
         -Wall
         -Werror
