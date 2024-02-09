@@ -1,0 +1,22 @@
+\section{Overview}
+
+\begin{frame}{Overall concept: CARLA}
+\begin{itemize}
+\item CARLA (autonomous simulator) running on PC
+\item Python client receives environment data from CARLA and sends it to Raspberry Pi
+\item \texttt{TestApp} component decides how to drive, and sends it back to Python client
+\item Communication must happen \textbf{securely}\ldots
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Overall concept: Secure Communication}
+\begin{itemize}
+\item (Symmetrically) \textbf{encrypted} sockets, provided by our \texttt{SecureCommunication} component
+\item \textbf{Key exchange} using asymmetric encryption
+  \begin{itemize}
+  \item \texttt{SecureCommunication} component implements algorithm
+  \item \texttt{WolfTPM} component implements hardware-assisted asymmetric decryption
+  \end{itemize}
+\item TPM is \textbf{authenticated} by comparing the generated key with a stored hash
+\end{itemize}
+\end{frame}
