@@ -235,7 +235,7 @@ void keystore_rpc_getCEK_RSA2048(uint32_t *exp) {
   memcpy(
       OS_Dataport_getBuf(keystorePort),
       cek.pub.publicArea.unique.rsa.buffer, CEK_SIZE);
-  Debug_DUMP_INFO(OS_Dataport_getBuf(keystorePort), CEK_SIZE);
+  Debug_DUMP_DEBUG(OS_Dataport_getBuf(keystorePort), CEK_SIZE);
 }
 
 /* Places the cSRK into the dataport. */
@@ -244,7 +244,7 @@ void keystore_rpc_getCSRK_RSA1024(uint32_t *exp) {
   memcpy(
       OS_Dataport_getBuf(keystorePort),
       csrk.pub.publicArea.unique.rsa.buffer, CSRK_SIZE);
-  Debug_DUMP_INFO(OS_Dataport_getBuf(keystorePort), CSRK_SIZE);
+  Debug_DUMP_DEBUG(OS_Dataport_getBuf(keystorePort), CSRK_SIZE);
 }
 
 /* Stores key in NV memory.
