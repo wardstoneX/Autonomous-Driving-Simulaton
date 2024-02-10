@@ -212,37 +212,40 @@ secureCommunication_rpc_socket_write(
     CHECK_IS_RUNNING(OS_Socket_getStatus(&networkStackCtx));
     OS_Socket_Handle_t apiHandle = {.ctx = networkStackCtx, .handleID = handle};
 
-    uint8_t* plaintext = malloc(*pLen);
+    uint8_t plaintext[*pLen];
     memcpy(plaintext, secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), *pLen);
+    Debug_LOG_DEBUG("Got %d bytes of plaintext:", *pLen);
+    Debug_DUMP_DEBUG(plaintext, *pLen);
 
-    uint8_t* K_sym = malloc(32);
     uint32_t keyLen = 32;
+    uint8_t K_sym[keyLen];
     if(keystore.loadKey(hStoredKey, &keyLen) != 0 || keyLen != 32) {
         Debug_LOG_ERROR("There was an error when loading the symmetric key for encryption");
         return -1;
     }
     memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
+    Debug_LOG_DEBUG("Read symmetric key from NV storage");
 
-    uint8_t* iv = malloc(12);
+    uint8_t iv[12];
     if(12 != entropy.read(12)){
         Debug_LOG_ERROR("There was an error when generating the IV for encryption");
         return -1;
     }
     memcpy(iv, OS_Dataport_getBuf(entropy.dataport), 12);
+    Debug_LOG_DEBUG("Read IV from TPM");
 
     uint8_t payload[OS_DATAPORT_DEFAULT_SIZE];
     if(encrypt_AES_GCM(hCrypto, K_sym, plaintext, *pLen, iv, payload, sizeof(payload)) != 0) {
         Debug_LOG_ERROR("There was an error when encrypting the message");
         return -1;
     }
-
+    Debug_LOG_DEBUG("Encrypted message.");
 
     size_t sentLength;
     ret = OS_Socket_write(apiHandle, payload, 12 + *pLen, &sentLength);
     
     printf("%d of %d bytes sent succesfully.", sentLength, *pLen);
-    sentLength -= 12;
-    memmove(pLen, &sentLength, sizeof(*pLen));
+    *pLen = sentLength - 12;
 
     return ret;
 }
