@@ -233,13 +233,17 @@ secureCommunication_rpc_socket_write(
     }
     memcpy(iv, OS_Dataport_getBuf(entropy.dataport), 12);
     Debug_LOG_DEBUG("Read IV from TPM");
+    Debug_DUMP_DEBUG(iv, 12);
 
     uint8_t payload[OS_DATAPORT_DEFAULT_SIZE];
-    if(encrypt_AES_GCM(hCrypto, K_sym, plaintext, *pLen, iv, payload, sizeof(payload)) != 0) {
+    size_t outputsize = sizeof(payload)-12;
+    memcpy(payload, iv, 12);
+    if(encrypt_AES_GCM(hCrypto, K_sym, plaintext, *pLen, iv, payload+12, outputsize) != 0) {
         Debug_LOG_ERROR("There was an error when encrypting the message");
         return -1;
     }
     Debug_LOG_DEBUG("Encrypted message.");
+    Debug_DUMP_DEBUG(payload, 12+outputsize);
 
     size_t sentLength;
     ret = OS_Socket_write(apiHandle, payload, 12 + *pLen, &sentLength);

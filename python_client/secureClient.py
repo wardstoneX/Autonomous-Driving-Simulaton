@@ -42,7 +42,7 @@ def setup_crypto_config():
             global K_sym
             K_sym = Random.get_random_bytes(32)
 
-            print(f"Generated key: {K_sym}")
+            print(f"Generated key: {K_sym.hex()}")
 
             cipher_EK = PKCS1_OAEP.new(EK, SHA256)
             cipher_SRK = PKCS1_OAEP.new(SRK, SHA256)
