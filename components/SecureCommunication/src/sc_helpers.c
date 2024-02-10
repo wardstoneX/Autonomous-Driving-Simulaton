@@ -41,10 +41,6 @@ uint32_t encrypt_AES_GCM(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t*
         .data.aes.len    = 32
     };
     memcpy((uint8_t*) aes256Data.data.aes.bytes, keyBytes, 32);
-    //Debug_LOG_INFO("DUMPING RECEIVED KEYBYTES");
-    //Debug_DUMP_INFO(keyBytes, 32);
-    //Debug_LOG_INFO("DUMPING LOADED KEYBYTES");
-    //Debug_DUMP_INFO(aes256Data.data.aes.bytes, 32);
 
     if(OS_CryptoKey_import(&hKey, hCrypto, &aes256Data) != OS_SUCCESS) {
         Debug_LOG_ERROR("There was an error importing the key");
@@ -66,8 +62,6 @@ uint32_t encrypt_AES_GCM(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t*
         Debug_LOG_ERROR("Only %d of %d bytes were encrypted successfully", outputSize, plaintextLen);
         return -1;
     }
-    //Debug_LOG_INFO("DUMPING PAYLOAD");
-    //Debug_DUMP_INFO(payload, 12+plaintextLen);
 
     return 0;
 }
@@ -93,10 +87,6 @@ uint32_t decrypt(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t* ciphert
         .data.aes.len    = 32
     };
     memcpy((uint8_t*) aes256Data.data.aes.bytes, keyBytes, 32);
-    //Debug_LOG_INFO("DUMPING RECEIVED KEYBYTES");
-    //Debug_DUMP_INFO(keyBytes, 32);
-    //Debug_LOG_INFO("DUMPING LOADED KEYBYTES");
-    //Debug_DUMP_INFO(aes256Data.data.aes.bytes, 32);
 
     if(OS_CryptoKey_import(&hKey, hCrypto, &aes256Data) != OS_SUCCESS) {
         Debug_LOG_ERROR("There was an error importing the key");
@@ -118,8 +108,6 @@ uint32_t decrypt(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t* ciphert
         Debug_LOG_ERROR("Only %d of %d bytes were decrypted successfully", outputSize, ciphertextLen - 12);
         return -1;
     }
-    //Debug_LOG_INFO("DUMPING PLAINTEXT");
-    //Debug_DUMP_INFO(plaintext, ciphertextLen - 12);
 
     return 0;
 }

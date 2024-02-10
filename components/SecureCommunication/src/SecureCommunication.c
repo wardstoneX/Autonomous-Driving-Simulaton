@@ -282,7 +282,7 @@ secureCommunication_rpc_socket_read(
 
     //actualLen = position - buf;
     actualLen = read;
-    Debug_LOG_INFO("GOT %d BYTES OF CIPHERTEXT", actualLen);
+    Debug_LOG_DEBUG("GOT %d BYTES OF CIPHERTEXT", actualLen);
 
     if(actualLen < 12) {
         Debug_LOG_ERROR("Not enough bytes were read, read operation unsuccessful");
@@ -399,7 +399,7 @@ secureCommunication_rpc_socket_recvfrom(
     } while (read > 0 || ret == OS_ERROR_TRY_AGAIN);
 
     actualLen = position - buf;
-    Debug_LOG_INFO("GOT %d BYTES OF CIPHERTEXT", actualLen);
+    Debug_LOG_DEBUG("GOT %d BYTES OF CIPHERTEXT", actualLen);
 
     if(actualLen < 12) {
         Debug_LOG_ERROR("Not enough bytes were read, read operation unsuccessful");
@@ -438,7 +438,7 @@ OS_NetworkStack_State_t
 secureCommunication_rpc_socket_getStatus(
     void)
 {
-    Debug_LOG_INFO("get_Status() called");
+    Debug_LOG_DEBUG("get_Status() called");
     return OS_Socket_getStatus(&networkStackCtx);
 }
 
@@ -525,7 +525,7 @@ static OS_Error_t exchange_keys(void) {
     OS_Error_t ret;
 
     //2.- create new srk
-    Debug_LOG_INFO("Creating SRK");
+    Debug_LOG_DEBUG("Creating SRK");
     uint32_t exp_SRK;
     keystore.getCSRK_RSA1024(&exp_SRK);
     uint8_t cSRK_ssh[8 + CSRK_SIZE];
@@ -534,11 +534,11 @@ static OS_Error_t exchange_keys(void) {
         Debug_LOG_WARNING("SOMETHING WENT WRONG when converting cSRK to OpenSSH format, converted %d of %d bytes", converted, sizeof(cSRK_ssh));
         return -1;
     }
-    Debug_LOG_INFO("SRK created");
-    Debug_DUMP_INFO(cSRK_ssh, sizeof(cSRK_ssh));
+    Debug_LOG_DEBUG("SRK created");
+    Debug_DUMP_DEBUG(cSRK_ssh, sizeof(cSRK_ssh));
 
     //3.- connect to python client and send EK_pub, SRK_pub
-    Debug_LOG_INFO("Creating EK");
+    Debug_LOG_DEBUG("Creating EK");
     uint32_t exp_EK;
     keystore.getCEK_RSA2048(&exp_EK);
     uint8_t cEK_ssh[8 + CEK_SIZE];
@@ -546,19 +546,18 @@ static OS_Error_t exchange_keys(void) {
         Debug_LOG_WARNING("SOMETHING WENT WRONG when converting cEK to OpenSSH format, converted %d of %d bytes", converted, sizeof(cEK_ssh));
         return -1;
     }
-    Debug_LOG_INFO("EK created");
-    Debug_DUMP_INFO(cEK_ssh, sizeof(cEK_ssh));
+    Debug_LOG_DEBUG("EK created");
+    Debug_DUMP_DEBUG(cEK_ssh, sizeof(cEK_ssh));
 
     Debug_LOG_INFO("Establishing connection to python client on keyexchange port");
 
     ret = waitForNetworkStackInit(&networkStackCtx);
-    Debug_LOG_INFO("returned from wait for nwstack init");
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("waitForNetworkStackInit() failed with: %d", ret);
         return ret;
     }
-    Debug_LOG_INFO("stack is initialized");
+    Debug_LOG_DEBUG("stack is initialized");
 
     OS_Socket_Handle_t hSocket;
     ret = OS_Socket_create(
@@ -571,7 +570,7 @@ static OS_Error_t exchange_keys(void) {
         Debug_LOG_ERROR("OS_Socket_create() failed, code %d", ret);
         return ret;
     }
-    Debug_LOG_INFO("socket is created");
+    Debug_LOG_DEBUG("socket is created");
 
     const OS_Socket_Addr_t dstAddr =
     {
@@ -586,7 +585,7 @@ static OS_Error_t exchange_keys(void) {
         OS_Socket_close(hSocket);
         return ret;
     }
-    Debug_LOG_INFO("returned from connect call!");
+    Debug_LOG_DEBUG("returned from connect call!");
 
     ret = waitForConnectionEstablished(hSocket.handleID);
     if (ret != OS_SUCCESS)
@@ -601,8 +600,8 @@ static OS_Error_t exchange_keys(void) {
     char payload[sizeof(cEK_ssh) + sizeof(cSRK_ssh)];
     memmove(payload, cEK_ssh, sizeof(cEK_ssh));
     memmove(payload + sizeof(cEK_ssh), cSRK_ssh, sizeof(cSRK_ssh));
-    Debug_LOG_INFO("PRINTING THE PAYLOAD");
-    Debug_DUMP_INFO(payload, sizeof(payload));
+    Debug_LOG_DEBUG("PRINTING THE PAYLOAD");
+    Debug_DUMP_DEBUG(payload, sizeof(payload));
 
     size_t n;
     size_t payload_len = sizeof(payload);
@@ -659,30 +658,32 @@ static OS_Error_t exchange_keys(void) {
         }
     } while (read > 0 || ret == OS_ERROR_TRY_AGAIN);
 
-    Debug_LOG_INFO("Received %d bytes as a response", position - buffer);
+    Debug_LOG_DEBUG("Received %d bytes as a response", position - buffer);
     char ciphertext[position - buffer];
     memmove(ciphertext, buffer, sizeof(ciphertext));
-    Debug_LOG_INFO("DUMPING RECEIVED CIPHERTEXT");
-    Debug_DUMP_INFO(ciphertext, sizeof(ciphertext));
+    Debug_LOG_DEBUG("DUMPING RECEIVED CIPHERTEXT");
+    Debug_DUMP_DEBUG(ciphertext, sizeof(ciphertext));
 
     //7.- decrypt the ciphertext to get K_sym
-    Debug_LOG_INFO("Decrypting...\n len of cyphertext is %d", sizeof(ciphertext));
+    Debug_LOG_INFO("Decrypting symmetric key");
+    Debug_LOG_DEBUG("Decrypting...\n len of cyphertext is %d", sizeof(ciphertext));
     int len = sizeof(ciphertext);
     memmove(OS_Dataport_getBuf(crypto.dataport), ciphertext, len);
     crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CEK, &len);
     crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CSRK, &len);
-    if(len != 32) {
+    if(len != 256) {
         Debug_LOG_WARNING("Something might have gone wrong, received %d bytes instead of %d", len, 32);
     }
 
     //following block is for debug purposes
-    Debug_LOG_INFO("PRINTING THE RECEIVED KEY DATA!!!!!!!!!!!!!!");
-    Debug_LOG_INFO("Key:");
-    Debug_DUMP_INFO(OS_Dataport_getBuf(crypto.dataport), 32);
+    Debug_LOG_DEBUG("PRINTING THE RECEIVED KEY DATA!!!!!!!!!!!!!!");
+    Debug_LOG_DEBUG("Key:");
+    Debug_DUMP_DEBUG(OS_Dataport_getBuf(crypto.dataport), 32);
     /*debug ends here*/
 
 
     //8.- store K_sym in the keystore
+    Debug_LOG_INFO("Storing key into the TPM");
     memmove(OS_Dataport_getBuf(keystore.dataport), OS_Dataport_getBuf(crypto.dataport), 32);
     hStoredKey = keystore.storeKey(32);
     if(hStoredKey == -1) {
@@ -698,8 +699,8 @@ static OS_Error_t exchange_keys(void) {
         return -1;
     }
     memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
-    Debug_LOG_INFO("dumping key loaded back from TPM");
-    Debug_DUMP_INFO(K_sym, 32);
+    Debug_LOG_DEBUG("dumping key loaded back from TPM");
+    Debug_DUMP_DEBUG(K_sym, 32);
     /*end of debug*/
 
     ret = OS_Socket_close(hSocket);
@@ -750,9 +751,7 @@ waitForConnectionEstablished(
     // established.
     for (;;)
     {
-        Debug_LOG_INFO("BEFORE CALLING WAIT");
         ret = OS_Socket_wait(&networkStackCtx);
-        Debug_LOG_INFO("AFTER CALLING WAIT");
         if (ret != OS_SUCCESS)
         {
             Debug_LOG_ERROR("OS_Socket_wait() failed, code %d", ret);

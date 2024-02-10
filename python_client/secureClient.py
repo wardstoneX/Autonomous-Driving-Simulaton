@@ -18,7 +18,6 @@ def setup_crypto_config():
 
             #3.- receive EK_pub and SRK_pub from app
             data = conn.recv(1024)
-            print(f"DUMP: {data.hex()}")
 
             EK_exp = int.from_bytes(data[0:4], "little")
             EK_nLen = int.from_bytes(data[4:8], "little")
@@ -42,13 +41,10 @@ def setup_crypto_config():
             global K_sym
             K_sym = Random.get_random_bytes(32)
 
-            print(f"Generated key: {K_sym.hex()}")
-
             cipher_EK = PKCS1_OAEP.new(EK, SHA256)
             cipher_SRK = PKCS1_OAEP.new(SRK, SHA256)
 
             ciphertext = cipher_EK.encrypt(cipher_SRK.encrypt(K_sym))
-            print(f"Encrypted key: {ciphertext.hex()}")
 
             #6.- send ciphertext to app
             conn.sendall(ciphertext)
@@ -77,7 +73,3 @@ def recv_decrypt(connection):
     nonce = data[0:12]
     cipher = AES.new(K_sym, AES.MODE_GCM, nonce)
     return cipher.decrypt(data[12:])
-
-
-
-
