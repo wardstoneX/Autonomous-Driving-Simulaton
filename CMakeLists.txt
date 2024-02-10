@@ -4,6 +4,7 @@
 cmake_minimum_required(VERSION 3.7.2)
 
 include(components/WolfTPM/CMakeLists.txt)
+include(components/SecureCommunication/CMakeLists.txt)
 include("plat/${PLATFORM}/plat_nic.cmake")
 
 os_set_config_file(
@@ -14,6 +15,8 @@ os_set_config_file(
 project(demo_tum_course C)
 
 WolfTPM_DeclareCAmkESComponent(WolfTPM)
+
+SecureCommunication_DeclareCAmkESComponent(SecureCommunication)
 
 TimeServer_DeclareCAmkESComponent(
     TimeServer
@@ -28,23 +31,6 @@ NetworkStack_PicoTcp_DeclareCAmkESComponent(
         -DSUBNET_MASK=ETH_SUBNET_MASK
 )
 
-DeclareCAmkESComponent(
-    SecureCommunication
-    INCLUDES
-        interfaces/headers
-    SOURCES
-        components/SecureCommunication/src/SecureCommunication.c
-        components/SecureCommunication/src/sc_helpers.c
-    C_FLAGS
-        -Wall
-        -Werror
-    LIBS
-        system_config
-        lib_debug
-        os_core_api
-        os_socket_client
-        os_crypto
-)
 
 DeclareCAmkESComponent(
   TestApp
