@@ -257,7 +257,7 @@ int run()
     Debug_LOG_INFO("Parking completed.\n Command to end simulation has been sent.\n");
 
     OS_Socket_close(new_socket);
-    Debug_LOG_INFO("The socket is closed.\n")
+    Debug_LOG_INFO("The socket is closed.\n");
     tpmctrl.shutdown();
     scv_delete(vector);
     scv_delete(vector_radar);

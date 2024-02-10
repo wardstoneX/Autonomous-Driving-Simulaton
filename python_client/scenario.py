@@ -50,7 +50,7 @@ class ScenarioSetup():
         return self.world
     
     def clean_up(self):
-        print("Cleaning up the scneario...")
+        print("Cleaning up the scenario...")
         self.sensor_data_sender.stop_thread()
         time.sleep(1)
         self.control_data_receiver.stop_thread()
