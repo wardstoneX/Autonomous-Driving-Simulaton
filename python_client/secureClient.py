@@ -28,14 +28,14 @@ def setup_crypto_config():
             SRK_n = int.from_bytes(data[16+EK_nLen:16+EK_nLen+SRK_nLen], "big")
             SRK = RSA.construct((SRK_n, SRK_exp))
             
-            #TODO: 4.- compare received EK_pub with stored hash
+            #4.- compare received EK_pub with stored hash
             rec_ek_hash = SHA256.new(data[8:8+EK_nLen])
             rec_digest = rec_ek_hash.hexdigest()
             f = open("EK_hash.txt", "r")
             og_digest = f.readline().strip()
             if rec_digest != og_digest:
-                print("The received EK is not correct, rec_digest: {rec_digest}")
-
+                print(f"The received EK is not correct, rec_digest: {rec_digest}")
+                exit(1)
 
             #5.- generate K_sym and encrypt: ciphertext = encrypt(EK_pub, encrypt(SRK_pub, K_sym))
             global K_sym
