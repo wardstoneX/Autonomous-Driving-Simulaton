@@ -10,7 +10,7 @@
 #include <string.h>
 #include <camkes.h>
 #include "utils.h"
-#include "include/scv/scv.h"
+#include "scv/scv.h"
 #include <stdio.h>
 #include <stdlib.h>
 
