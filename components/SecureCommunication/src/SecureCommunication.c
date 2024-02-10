@@ -235,15 +235,14 @@ secureCommunication_rpc_socket_write(
     Debug_LOG_DEBUG("Read IV from TPM");
     Debug_DUMP_DEBUG(iv, 12);
 
-    uint8_t payload[OS_DATAPORT_DEFAULT_SIZE];
-    size_t outputsize = sizeof(payload)-12;
-    memcpy(payload, iv, 12);
-    if(encrypt_AES_GCM(hCrypto, K_sym, plaintext, *pLen, iv, payload+12, outputsize) != 0) {
+    size_t outputsize = OS_DATAPORT_DEFAULT_SIZE;
+    uint8_t payload[outputsize];
+    if(encrypt_AES_GCM(hCrypto, K_sym, plaintext, *pLen, iv, payload, outputsize) != 0) {
         Debug_LOG_ERROR("There was an error when encrypting the message");
         return -1;
     }
     Debug_LOG_DEBUG("Encrypted message.");
-    Debug_DUMP_DEBUG(payload, 12+outputsize);
+    Debug_DUMP_DEBUG(payload, 12 + *pLen);
 
     size_t sentLength;
     ret = OS_Socket_write(apiHandle, payload, 12 + *pLen, &sentLength);
@@ -292,8 +291,9 @@ secureCommunication_rpc_socket_read(
         return -1;
     }
 
-    uint8_t* K_sym = malloc(32);
+    Debug_LOG_DEBUG("loading key from TPM");
     uint32_t keyLen = 32;
+    uint8_t K_sym[keyLen];
     if(keystore.loadKey(hStoredKey, &keyLen) != 0 || keyLen != 32) {
         Debug_LOG_ERROR("There was an error when loading the symmetric key for encryption");
         actualLen = 0;
@@ -302,6 +302,7 @@ secureCommunication_rpc_socket_read(
 
     }
     memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
+    Debug_LOG_DEBUG("key loaded from TPM");
 
     if(decrypt(hCrypto, K_sym, buf, actualLen, plaintext, sizeof(plaintext)) != 0) {
         Debug_LOG_ERROR("There was an error when decrypting the received message");
@@ -309,6 +310,7 @@ secureCommunication_rpc_socket_read(
         memcpy(pLen, &actualLen, sizeof(*pLen));
         return -1;
     }
+    Debug_LOG_DEBUG("message decrypted");
 
     actualLen -= 12;
     memmove(secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), plaintext, actualLen);
