@@ -86,8 +86,8 @@ class ControlDataReceiver(threading.Thread):
         if self.is_alive():
             self.join()
             
-MAX_DATA_POINTS = 20
-SEND_INTERVAL = 1
+MAX_DATA_POINTS = 10
+SEND_INTERVAL = 0.5
 
 class SensorDataSender(threading.Thread):
     def __init__(self,connection_socket, gnss_handler, radar_handler):

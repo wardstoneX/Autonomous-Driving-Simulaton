@@ -43,7 +43,7 @@ void park(OS_Socket_Handle_t sock) {
     //move to parking place
     
     //double dist = lastDetectedVehicle.mainVehiclePosition.x - midpoint.x;
-    double dist1 = lastDetectedVehicle.mainVehiclePosition.x -lastDetectedVehicle.OtherVehiclePosition.x;
+    double dist1 = 12 + lastDetectedVehicle.mainVehiclePosition.x -lastDetectedVehicle.OtherVehiclePosition.x;
     double time = predict_power(dist1);
 
     printf("Distance: %f, Time: %f\n", dist1, time);
@@ -99,10 +99,13 @@ void checkForParking() {
 
                 // calculate the middle point of two detections here
                 midpoint = calculateMidpoint(&lastDetectedVehicle.mainVehiclePosition, &lastDetectedVehicle.OtherVehiclePosition);
-                printf("Midpoint: (%f, %f, %f)\n", midpoint.x, midpoint.y, midpoint.z);
+                
                 parkingSpotDetected = true;
                 lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
                 lastDetectedVehicle.mainVehiclePosition = *mainGNSSposition;
+                printf("Main: (%f, %f, %f)  , other: (%f, %f, %f) \n", lastDetectedVehicle.mainVehiclePosition.x,lastDetectedVehicle.mainVehiclePosition.y, 
+                lastDetectedVehicle.mainVehiclePosition.z, lastDetectedVehicle.OtherVehiclePosition.x, lastDetectedVehicle.OtherVehiclePosition.y, lastDetectedVehicle.OtherVehiclePosition.z);
+
                 return;
             }
             lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
@@ -147,7 +150,7 @@ void process_buffer(char* buffer, ssize_t size) {
 
             struct Tuple radar, gnss;
             sscanf(data, "%f,%f,%f-%f,%f,%f", &radar.x, &radar.y, &radar.z, &gnss.x, &gnss.y, &gnss.z);
-            printf(" GNSS: (%f, %f, %f)\n", gnss.x, gnss.y, gnss.z);
+            //printf(" GNSS: (%f, %f, %f)\n", gnss.x, gnss.y, gnss.z);
 
             scv_push_back(vector_radar, &radar);
             scv_push_back(vector, &gnss);
@@ -236,7 +239,7 @@ int run()
         ret = OS_Socket_read(new_socket, buffer, sizeof(buffer) - 1, &valread);
         
         if (valread > 0) {
-            printf("Read %d bytes \n", valread);
+            //printf("Read %d bytes \n", valread);
             char temp[sizeof(buffer) + leftover_size];
             if (leftover_size > 0) {
                 memcpy(temp, leftover, leftover_size);

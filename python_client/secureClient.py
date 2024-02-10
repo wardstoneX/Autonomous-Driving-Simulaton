@@ -66,7 +66,7 @@ def send_encrypt(connection, data):
     cipher = AES.new(K_sym, AES.MODE_GCM, nonce)
     ciphertext = cipher.encrypt(data)
     payload = nonce + ciphertext
-    print(f"Sending {len(ciphertext)} bytes of data.")
+    #print(f"Sending {len(ciphertext)} bytes of data.")
     connection.sendall(payload)
 
 def recv_decrypt(connection):
