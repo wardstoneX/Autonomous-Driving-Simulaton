@@ -41,7 +41,8 @@ assembly {
 	wolfTPM,
 	secureCommunication.entropy_rpc, secureCommunication.entropy_dp,
 	secureCommunication.keystore_rpc, secureCommunication.keystore_dp,
-	secureCommunication.crypto_rpc, secureCommunication.crypto_dp
+	secureCommunication.crypto_rpc, secureCommunication.crypto_dp,
+	testApp.tpm_ctrl_rpc
     )
 
     /* Secure Communication */

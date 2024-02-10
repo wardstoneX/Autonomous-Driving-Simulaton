@@ -1,0 +1,5 @@
+#include "if_TPMctrl.camkes.h"
+
+procedure if_TPMctrl {
+  IF_TPMCTRL_CAMKES
+}

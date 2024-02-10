@@ -336,3 +336,9 @@ int crypto_rpc_encrypt_RSA_OAEP(int key, int *len) {
       1);
   return 0;
 }
+
+/* if_TPMctrl */
+
+void tpm_ctrl_rpc_shutdown(void) {
+  wolfTPM2_Cleanup(&dev);
+}

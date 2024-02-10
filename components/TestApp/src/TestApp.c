@@ -5,6 +5,7 @@
 #include "system_config.h"
 #include "OS_Socket.h"
 #include "interfaces/if_OS_Socket.h"
+#include "if_TPMctrl.h"
 #include "lib_debug/Debug.h"
 #include <string.h>
 #include <camkes.h>
@@ -23,6 +24,7 @@
 //#include <stdbool.h>
 
 OS_Socket_Handle_t sock;
+if_TPMctrl_t tpmctrl = IF_TPMCTRL_ASSIGN(tpm_ctrl_rpc);
 
 struct Tuple midpoint;
 bool parkingSpotDetected = false;
@@ -220,6 +222,7 @@ int run()
     {
         Debug_LOG_ERROR("OS_Socket_connect() failed, code %d", ret);
         OS_Socket_close(new_socket);
+        tpmctrl.shutdown();
         return ret;
     }
 
@@ -262,8 +265,8 @@ int run()
     send_parameters(new_socket,0.0, 0.0, 0.0,0, 0);
     printf("Parking completed\n Command to end simulation sent\n");
 
-
     OS_Socket_close(new_socket);
+    tpmctrl.shutdown();
     scv_delete(vector);
     scv_delete(vector_radar);
     Debug_LOG_INFO("Demo completed successfully.");

@@ -7,6 +7,8 @@
 component TestApp {
   control;
 
+  uses	if_TPMctrl	tpm_ctrl_rpc;
+
   /* Networking: connection to the secure communication component */
   IF_OS_SOCKET_USE(secureCommunication)
 };
