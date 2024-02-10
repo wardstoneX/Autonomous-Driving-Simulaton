@@ -62,6 +62,23 @@ crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CSRK, &len);
 \end{minted}
 \end{frame}
 
+\begin{frame}[fragile]{Custom Interfaces}
+\texttt{if\_TPMctrl}: Functions to control the TPM itself
+
+\begin{minted}{c}
+void shutdown(void)
+\end{minted}
+
+Why is this needed?
+
+\begin{itemize}
+\item TPM goes into Dictionary Attack Lockdown mode if improperly shut down too often
+\item CAmkES appears not to have a \texttt{pre\_shutdown()} equivalent of \texttt{pre\_init()}
+\item \texttt{SecureCommunication} also a passive component\\
+\item[$\Rightarrow$] Shutdown command must be sent by \texttt{TestApp}, can't re-use interfaces already connected to \texttt{SecureCommunication}
+\end{itemize}
+\end{frame}
+
 \begin{frame}{Initialization}
 \begin{itemize}
 \item Upon component startup, \texttt{pre\_init()} gets called

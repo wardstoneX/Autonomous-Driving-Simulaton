@@ -217,6 +217,27 @@ crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CEK, &len))
 crypto.decrypt_RSA_OAEP(IF_CRYPTO_KEY_CSRK, &len))
 ```
 
+## `if_TPMctrl`
+
+This interface provides just one function:
+
+```c
+void shutdown(void)
+```
+
+Apparently, the TPM can go into Dictionary Attack Lockout mode if it is
+improperly shut down too often:
+
+> To prevent this type of attack, at `TPM2_Startup()`, the TPM checks if it is
+> starting after an orderly shutdown. If not, and *failedTries* is not already
+> equal to *maxTries*, then the TPM will increment *failedTries* by one.
+
+(source: [TPM 2.0 Architecture Specification](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part1_Architecture_pub.pdf),
+ page 164)
+
+To avoid this, it's necessary to properly shut down the TPM when the program
+is finished. This is done by invoking the `shutdown()` function.
+
 ## Structure
 
 - `trentos.c` implements the interfaces and handles the initialization
