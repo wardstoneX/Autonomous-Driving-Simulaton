@@ -36,13 +36,9 @@ struct Tuple calculateMidpoint(struct Tuple *point1, struct Tuple *point2) {
 }
 
 void send_control_data(OS_Socket_Handle_t sock, struct ControlData data) {
-    // Serialize the struct into a byte stream
-    char buffer[sizeof(struct ControlData)];
-    memcpy(buffer, &data, sizeof(struct ControlData));
-
     // Send the byte stream
-     size_t n;
-    OS_Socket_write(sock, buffer, sizeof(buffer), &n);
+    size_t n;
+    OS_Socket_write(sock, &data, sizeof(data), &n);
 }
 
 
