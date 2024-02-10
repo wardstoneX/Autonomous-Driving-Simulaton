@@ -233,7 +233,7 @@ improperly shut down too often:
 > equal to *maxTries*, then the TPM will increment *failedTries* by one.
 
 (source: [TPM 2.0 Architecture Specification](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part1_Architecture_pub.pdf),
- page 164)
+ page 165)
 
 To avoid this, it's necessary to properly shut down the TPM when the program
 is finished. This is done by invoking the `shutdown()` function.
