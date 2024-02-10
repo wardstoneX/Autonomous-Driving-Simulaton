@@ -48,6 +48,35 @@ sdk/scripts/open_trentos_build_env.sh \
 If the project directory isn't named `sdk/demo/demo_tpm`, substitute that
 with its actual path.
 
+# Generating and importing a new cEK
+
+If TRENTOS application is run for the first time on a particular TPM, it's
+first necessary to let it clear the TPM, take ownership, generate a fresh
+cEK, and store it in the NV storage.
+
+On the TRENTOS side, add the following at the beginning of the file
+`components/WolfTPM/trentos.c`:
+
+```c
+#define CLEAR_TPM
+```
+
+Re-compile and re-run. The TRENTOS application will print a hexdump of the
+new cEK and exit.
+
+Now, the new key must be imported into the Python client. Do:
+
+```sh
+cd python_client/
+python3 importEK.py
+```
+
+And copy-paste the key into the prompt.
+
+(Sending it over the network would've added significant complexity to the
+ WolfTPM component, which doesn't seem worth it for something that ideally
+ only runs once.)
+
 # Running the Python client
 
 // TODO
