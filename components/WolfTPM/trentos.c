@@ -1,3 +1,4 @@
+#define CLEAR_TPM
 #include <assert.h>
 #include <string.h>
 #include "camkes.h"
