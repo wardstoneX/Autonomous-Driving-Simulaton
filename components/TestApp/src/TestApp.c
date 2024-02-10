@@ -43,11 +43,11 @@ void park(OS_Socket_Handle_t sock) {
     //move to parking place
     
     //double dist = lastDetectedVehicle.mainVehiclePosition.x - midpoint.x;
-    double dist1 = 12 + lastDetectedVehicle.mainVehiclePosition.x -lastDetectedVehicle.OtherVehiclePosition.x;
+    double dist1 = 12 ; //+ lastDetectedVehicle.mainVehiclePosition.x -lastDetectedVehicle.OtherVehiclePosition.x;
     double time = predict_power(dist1);
 
     printf("Distance: %f, Time: %f\n", dist1, time);
-    send_parameters(sock,0.4, 0.0, 0.0,1, time);
+    send_parameters(sock,0.4, 0.0, 0.0,1, 4);
     //send_parameters(sock,0.4, 0.0, 0.0,1, time - 5.25);
 
 

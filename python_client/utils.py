@@ -10,6 +10,7 @@ import carla
 
 
 def read_offsets_from_file(filename):
+    print("scenario is loaded from file: ", filename)
     with open(filename, 'r') as f:
         line = f.readline()
         offsets = list(map(int, line.split('-')))

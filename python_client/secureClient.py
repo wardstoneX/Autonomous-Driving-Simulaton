@@ -71,10 +71,11 @@ def send_encrypt(connection, data):
 
 def recv_decrypt(connection):
     data = connection.recv(1024)
+    if len(data)<12:
+        return b""
     nonce = data[0:12]
     cipher = AES.new(K_sym, AES.MODE_GCM, nonce)
     return cipher.decrypt(data[12:])
-
 
 
 

@@ -17,6 +17,7 @@ def start_server(host, port):
     print(f"Server listening on {host}:{port}")
     setup_crypto_config()
     client_socket, client_address = server_socket.accept()
+    client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     return client_socket
 
 def send_to_server(connection_socket,data1, data2):
@@ -86,8 +87,8 @@ class ControlDataReceiver(threading.Thread):
         if self.is_alive():
             self.join()
             
-MAX_DATA_POINTS = 10
-SEND_INTERVAL = 0.5
+MAX_DATA_POINTS = 8
+SEND_INTERVAL = 0.4
 
 class SensorDataSender(threading.Thread):
     def __init__(self,connection_socket, gnss_handler, radar_handler):
