@@ -77,6 +77,9 @@ And copy-paste the key into the prompt.
  WolfTPM component, which doesn't seem worth it for something that ideally
  only runs once.)
 
+Remember to remove the `#define CLEAR_TPM` and re-compile before running
+the application again.
+
 # Running the Python client
 
 // TODO
