@@ -3,11 +3,8 @@ import argparse
 def parse_arguments():
     parser = argparse.ArgumentParser(
     usage="%(prog)s [OPTION] [FILE]...",
-    description="Print or check SHA1 (160-bit) checksums."
-    )
-    #"10.149.55.108"  6061
+    description="This is a node between the CARLA simulator and the Raspberry Pi. See project readme for more information.")
     parser.add_argument('-hserv', '--hostserver', type=str, default='10.0.0.10', help='Hostname (default: localhost)')
-    #parser.add_argument('--host_server', type=str, help='The host server')
     parser.add_argument('-pserv', '--portserver', type=int, default=6000, help='Port number (default: 6000)')
     parser.add_argument('-hsim', '--hostsimulator', type=str, default='localhost', help='Simulator Host (default: localhost)')
     parser.add_argument('-psim', '--portsimulator', type=int, default=2000, help='Simulator Port (default: 2000)')

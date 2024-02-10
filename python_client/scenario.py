@@ -5,7 +5,6 @@ from communication import SensorDataSender, ControlDataReceiver, start_server
 from utils import GNSSHandler, RadarHandler, read_offsets_from_file
 from arg_parser import parse_arguments
 
-## it might be necessary to add timeouts while setting up stuff
 class ScenarioSetup():
     Y1_POSITION = 237.5
     Y2_POSITION = 244.5
@@ -15,7 +14,6 @@ class ScenarioSetup():
     PITCH = 0.0
     YAW = 0.02  
     ROLL = 0.0
-    X_OFFSETS = [0, 5, 12, 20, 25, 33, 48, 55]
     
     def __init__(self):
         self.args = parse_arguments()
@@ -34,10 +32,7 @@ class ScenarioSetup():
         self.main_vehicle = None
         self.sensors = []
         self.vehicles = []
-        
         self.simulator_scenario = read_offsets_from_file("scenarios/" + self.scenario_file)
-        
-        
         self.connection_socket = start_server(self.hostserver, self.portserver)
         self.gnss_handler = GNSSHandler()
         self.radar_handler = RadarHandler()
@@ -45,6 +40,7 @@ class ScenarioSetup():
         self.control_data_receiver = ControlDataReceiver(self.connection_socket)
         
     def initialize_scenario(self):
+        print("Initializing the scenario...")
         self.change_map(self.map)
         self.setup_vehicles()
         self.sensor_setup()
@@ -54,29 +50,33 @@ class ScenarioSetup():
         return self.world
     
     def clean_up(self):
-        print("Cleaning up...")
+        print("Cleaning up the scneario...")
         self.sensor_data_sender.stop_thread()
         time.sleep(1)
         self.control_data_receiver.stop_thread()
         time.sleep(1)
-        
+        print("Threads have been stopped.")
         for actor in self.sensors:
             actor.destroy()
+        print("Sensors have been destroyed.")
         for actor in self.vehicles:
             actor.destroy()
+        print("Vehicles have been destroyed.")    
         time.sleep(2)    
     def start_threads(self):
-        # i dont know about the wait here
+        print("Starting Receive/Send threads...")
         time.sleep(3)
         self.sensor_data_sender.start()
         self.control_data_receiver.start()
         
     def apply_control(self, control_data):
+        print(f"Applying control {control_data}.")
         self.main_vehicle.apply_control(carla.VehicleControl(throttle=control_data.throttle,
                                                        steer=control_data.steer,
                                                        brake=control_data.brake,
                                                        reverse=control_data.reverse))  
     def brake(self):
+        print("Applying brake.")
         self.main_vehicle.apply_control(carla.VehicleControl(throttle=0,
                                                        steer=0,
                                                        brake=1))    
@@ -118,15 +118,11 @@ class ScenarioSetup():
         print( "Sensors have been set up.")
              
     def setup_vehicles(self):
-
-        
-        print("Setting Spectator Tansform...")
         spectator = self.world.get_spectator()
         transform = carla.Transform(carla.Location(x=130, y=self.Y2_POSITION, z=62), carla.Rotation(pitch=-90, yaw=0, roll=0))
         spectator.set_transform(transform)
-        print(f"Spectator Transform set to {transform}.")
+        print(f"Spectator Transform is set.")
         
-        print("Setting up vehicles on the side of the road...")
         for x_offset in self.simulator_scenario:
             transform = carla.Transform(
             carla.Location(x=self.X_POSITION + x_offset, y=self.Y3_POSITION, z=self.Z_POSITION),
@@ -135,8 +131,6 @@ class ScenarioSetup():
             vehicle = self.world.spawn_actor(self.vehicle_blueprint, transform)
             self.vehicles.append(vehicle)
         print("Vehicles on the side have been set up.")    
-        
-        print("Setting main vehicle...")
         
         main_transform = carla.Transform(carla.Location(x=self.X_POSITION - 6, y=self.Y2_POSITION, z=self.Z_POSITION),
                                 carla.Rotation(pitch=self.PITCH, yaw=self.YAW, roll=self.ROLL))
@@ -148,5 +142,4 @@ class ScenarioSetup():
         self.main_vehicle = main_vehicle
         
         print("Main vehicle has been set up.")
-        #print(f"The length of the vehicle is {main_vehicle.bounding_box.extent.x * 2}.")
-        #print(f"The width of the vehicle is {main_vehicle.bounding_box.extent.y * 2}.")
+      

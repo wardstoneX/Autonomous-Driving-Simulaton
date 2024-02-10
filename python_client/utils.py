@@ -3,14 +3,13 @@
 import numpy as np
 import threading
 import math
-
 import carla            
 
 
 
 
 def read_offsets_from_file(filename):
-    print("scenario is loaded from file: ", filename)
+    print("Scenario is loaded from file: ", filename)
     with open(filename, 'r') as f:
         line = f.readline()
         offsets = list(map(int, line.split('-')))
@@ -83,7 +82,6 @@ class RadarHandler:
     def radar_callback(self, radar_data):
         list = []
         current_rot = radar_data.transform.rotation
-        #world = get_world()
         
         for detect in radar_data:
             azi = math.degrees(detect.azimuth)
@@ -109,10 +107,8 @@ class RadarHandler:
             list.append((location_.x, location_.y, location_.z))
 
         list = list[0] if list else (0, 0, 0)
-        #print(list)
         with self.radar_data_lock:
             self.radar_data_points.append(list)
-            #print(list)
                 
                 
                

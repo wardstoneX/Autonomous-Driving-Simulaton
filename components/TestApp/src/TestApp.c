@@ -14,14 +14,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-//#include <netinet/in.h>
-//#include "scv.h"
-//#include <tgmath.h>
-//#include <netinet/in.h>
-//#include <sys/socket.h>
-//#include <unistd.h>
-//#include <tgmath.h>
-//#include <stdbool.h>
 
 OS_Socket_Handle_t sock;
 if_TPMctrl_t tpmctrl = IF_TPMCTRL_ASSIGN(tpm_ctrl_rpc);
@@ -36,23 +28,14 @@ ssize_t leftover_size = 0;
 char leftover[1024];
 
 void park(OS_Socket_Handle_t sock) {
-    printf("Parking initiated\n");
+    Debug_LOG_INFO("Parking procedure initiated.\n");
+
     // lane change
     send_parameters(sock,0.4, 0.3, 0,0, 3.35);
     send_parameters(sock,0.4, -0.3, 0,0, 1.65);
     send_parameters(sock,0.0, 0.0, 1.0,0, 2);
 
-    //move to parking place
-    
-    //double dist = lastDetectedVehicle.mainVehiclePosition.x - midpoint.x;
-    double dist1 = 12 ; //+ lastDetectedVehicle.mainVehiclePosition.x -lastDetectedVehicle.OtherVehiclePosition.x;
-    double time = predict_power(dist1);
-
-    printf("Distance: %f, Time: %f\n", dist1, time);
     send_parameters(sock,0.4, 0.0, 0.0,1, 4);
-    //send_parameters(sock,0.4, 0.0, 0.0,1, time - 5.25);
-
-
 
     // initiate the parking process
     send_parameters(sock,0.0, 0.0, 1.0,0, 2);
@@ -62,6 +45,7 @@ void park(OS_Socket_Handle_t sock) {
     send_parameters(sock,0.2, -0.6, 0.0,1, 2.25);
 
     send_parameters(sock,0.0, 0.0, 1.0,0, 5);
+    Debug_LOG_INFO("All parking commands have been sent.\n");
 
 }
 
@@ -76,8 +60,6 @@ void checkForParking() {
         struct Tuple *mainGNSSposition = (struct Tuple *) scv_front(vector);
         struct Tuple *radarDetection = (struct Tuple *) scv_front(vector_radar);
 
-        //printf("radar detection:  (%f, %f, %f)\n", radarDetection->x, radarDetection->y, radarDetection->z);
-
         scv_pop_front(vector);
         scv_pop_front(vector_radar);
 
@@ -88,33 +70,37 @@ void checkForParking() {
         if (isZeroTuple(lastDetectedVehicle.mainVehiclePosition) && isZeroTuple(lastDetectedVehicle.OtherVehiclePosition)) {
             lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
             lastDetectedVehicle.mainVehiclePosition = *mainGNSSposition;
-            printf("main vehicle at position (%f, %f, %f) detected other vehicle at position (%f, %f, %f)\n",mainGNSSposition->x, mainGNSSposition->y, mainGNSSposition->z, radarDetection->x, radarDetection->y, radarDetection->z);
+            Debug_LOG_INFO("Main vehicle at position (%f, %f, %f) detected another vehicle at position (%f, %f, %f)\n",mainGNSSposition->x, mainGNSSposition->y, mainGNSSposition->z, radarDetection->x, radarDetection->y, radarDetection->z);
             continue;
         }
 
         float distance = calculateEuclideanDistance(&lastDetectedVehicle.OtherVehiclePosition, radarDetection);
-        printf("Distance: %f\n", distance);
+        Debug_LOG_INFO("Main vehicle at position (%f, %f, %f) detected another vehicle at position (%f, %f, %f)\n",mainGNSSposition->x, mainGNSSposition->y, mainGNSSposition->z, radarDetection->x, radarDetection->y, radarDetection->z);
+
+        Debug_LOG_INFO("Distance difference between current measurement and last measurement: %f\n", distance);
         if (distance > 4.0) {
+            lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
+            lastDetectedVehicle.mainVehiclePosition = *mainGNSSposition;
+            Debug_LOG_INFO("New vehicle has beeen detected!\n");
             if (distance > 12) {
-                printf("Park spot found\n");
+                Debug_LOG_INFO("The distance is over 12 meters.\n Park spot has been found\n");
+
                 send_parameters(sock, 0.0, 0.0, 1.0, 0, 3);
+                Debug_LOG_INFO("The command to stop the main vehicle has been sent.\n");
 
                 // calculate the middle point of two detections here
                 midpoint = calculateMidpoint(&lastDetectedVehicle.mainVehiclePosition, &lastDetectedVehicle.OtherVehiclePosition);
                 
                 parkingSpotDetected = true;
-                lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
-                lastDetectedVehicle.mainVehiclePosition = *mainGNSSposition;
-                printf("Main: (%f, %f, %f)  , other: (%f, %f, %f) \n", lastDetectedVehicle.mainVehiclePosition.x,lastDetectedVehicle.mainVehiclePosition.y, 
-                lastDetectedVehicle.mainVehiclePosition.z, lastDetectedVehicle.OtherVehiclePosition.x, lastDetectedVehicle.OtherVehiclePosition.y, lastDetectedVehicle.OtherVehiclePosition.z);
+                //lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
+                //lastDetectedVehicle.mainVehiclePosition = *mainGNSSposition;
 
                 return;
-            }
-            lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
-            lastDetectedVehicle.mainVehiclePosition = *mainGNSSposition;
-            printf("New vehicle detected!!!!!!! main vehicle at position (%f, %f, %f) detected other vehicle at position (%f, %f, %f)\n",mainGNSSposition->x, mainGNSSposition->y, mainGNSSposition->z, radarDetection->x, radarDetection->y, radarDetection->z);
+            } else {
+                continue;
 
-            continue;
+            }
+            
         }
 
     }
@@ -142,7 +128,7 @@ void process_buffer(char* buffer, ssize_t size) {
 
             // Check for the end of the data pair
             if (buffer[start + 5 + data_size] != '\x14') {
-                fprintf(stderr, "Error: Expected '\\x14' at the end of the data pair, but found '\\x%x'\n", buffer[start + 5 + data_size]);
+                //fprintf(stderr, "Error: Expected '\\x14' at the end of the data pair, but found '\\x%x'\n", buffer[start + 5 + data_size]);
                 break; // Wait for the rest of the message to arrive
             }
 
@@ -182,22 +168,22 @@ void process_buffer(char* buffer, ssize_t size) {
 
 int run()
 {
-    
     Debug_LOG_INFO("Starting test_app_server...");
 
     // dont forget to clean the vectors at the end
     vector = scv_new(sizeof(struct Tuple), 1000);
     vector_radar = scv_new(sizeof(struct Tuple), 1000);
-    
-    
+    Debug_LOG_INFO("Data storage vectors have been initialized.\n");
 
-    // Check and wait until the NetworkStack component is up and running.
+
     OS_Error_t ret = waitForNetworkStackInit(&networkStackCtx);
     if (OS_SUCCESS != ret)
     {
         Debug_LOG_ERROR("waitForNetworkStackInit() failed with: %d", ret);
         return -1;
     }
+    Debug_LOG_INFO("Network stack has been initiated.\n");
+
 
     OS_Socket_Handle_t new_socket;
     ret = OS_Socket_create(
@@ -210,6 +196,9 @@ int run()
         Debug_LOG_ERROR("OS_Socket_create() failed, code %d", ret);
         return -1;
     }
+        
+    Debug_LOG_INFO("Client socket has been created.\n");
+
 
     const OS_Socket_Addr_t dstAddr =
     {
@@ -218,6 +207,8 @@ int run()
     };
 
     ret = OS_Socket_connect(new_socket, &dstAddr);
+    Debug_LOG_INFO("Client socket has been connected to the server.\n");
+
     if (ret != OS_SUCCESS)
     {
         Debug_LOG_ERROR("OS_Socket_connect() failed, code %d", ret);
@@ -229,7 +220,10 @@ int run()
 
     sock = new_socket;
     char buffer[4096] = { 0 };
+        
     send_parameters(new_socket, 0.2, 0.0, 0.0, 0,0);
+    Debug_LOG_INFO("Initial command to start driving car has been sent.\n");
+
     size_t valread = 0;
 
     while (1) {
@@ -242,7 +236,6 @@ int run()
         ret = OS_Socket_read(new_socket, buffer, sizeof(buffer) - 1, &valread);
         
         if (valread > 0) {
-            //printf("Read %d bytes \n", valread);
             char temp[sizeof(buffer) + leftover_size];
             if (leftover_size > 0) {
                 memcpy(temp, leftover, leftover_size);
@@ -254,21 +247,22 @@ int run()
 
         }
     }
-    printf("end reading\n");
+    Debug_LOG_INFO("Receiving sensor data is stopped.\n");
 
-    // initiating the parking process
 
     park(new_socket);
 
 
-    /// there is endloss loop here
     send_parameters(new_socket,0.0, 0.0, 0.0,0, 0);
-    printf("Parking completed\n Command to end simulation sent\n");
+    Debug_LOG_INFO("Parking completed.\n Command to end simulation has been sent.\n");
 
     OS_Socket_close(new_socket);
+    Debug_LOG_INFO("The socket is closed.\n")
     tpmctrl.shutdown();
     scv_delete(vector);
     scv_delete(vector_radar);
+    Debug_LOG_INFO("Data storage vectors have been deleted.");
+
     Debug_LOG_INFO("Demo completed successfully.");
 
     return 0;
