@@ -31,36 +31,14 @@ static const OS_Crypto_Config_t cryptoCfg =
         entropy_rpc,
         entropy_dp),
 };
-
-
-
-/*
-// Definition of a key-generation spec for a 256-bit AES key
-static OS_CryptoKey_Spec_t aes_spec = {
-    .type = OS_CryptoKey_SPECTYPE_BITS,
-    .key = {
-        .type = OS_CryptoKey_TYPE_AES,
-        .params.bits = 256
-    }
-};
-*/
-
-
-
-
 static OS_Crypto_Handle_t hCrypto;
-
 
 if_OS_Entropy_t entropy = IF_OS_ENTROPY_ASSIGN(entropy_rpc, entropy_dp);
 if_KeyStore_t keystore = IF_KEYSTORE_ASSIGN(keystore_rpc, keystore_dp);
 if_Crypto_t crypto = IF_CRYPTO_ASSIGN(crypto_rpc, crypto_dp);
 
-static uint32_t hStoredKey;
-
 static int is_initialized = 0;
-
-
-
+static uint32_t hStoredKey;
 
 
 //------------------------------------------------------------------------------
@@ -86,12 +64,6 @@ void post_init(void) {
 
 
 
-
-
-
-
-
-
 //----------------------------------------------------------------------
 // if_OS_Socket
 //----------------------------------------------------------------------
@@ -107,7 +79,7 @@ secureCommunication_rpc_socket_create(
         Debug_LOG_INFO("STARTING KEY EXCHANGE");
         is_initialized = exchange_keys() == OS_SUCCESS;
         if (!is_initialized) {
-            Debug_LOG_ERROR("KEy exchange failed, aborting");
+            Debug_LOG_ERROR("Key exchange failed, aborting");
             exit(1);
         }
     }
@@ -438,7 +410,6 @@ secureCommunication_rpc_socket_getStatus(
 }
 
 
-
 OS_Error_t
 secureCommunication_rpc_socket_getPendingEvents(
     size_t  bufSize,
@@ -451,27 +422,15 @@ secureCommunication_rpc_socket_getPendingEvents(
 
 
 
-
-
-
-
-
-
-
-
-
 //----------------------------------------------------------------------
 // Other functions
 //----------------------------------------------------------------------
-
-
-
 
 static OS_Error_t exchange_keys(void) {
     Debug_LOG_INFO("KEY EXCHANGE ALGORITHM CALLED");
     OS_Error_t ret;
 
-    //2.- create new srk
+    //2.- Create new srk and ek
     Debug_LOG_DEBUG("Creating SRK");
     uint32_t exp_SRK;
     keystore.getCSRK_RSA1024(&exp_SRK);
@@ -484,7 +443,6 @@ static OS_Error_t exchange_keys(void) {
     Debug_LOG_DEBUG("SRK created");
     Debug_DUMP_DEBUG(cSRK_ssh, sizeof(cSRK_ssh));
 
-    //3.- connect to python client and send EK_pub, SRK_pub
     Debug_LOG_DEBUG("Creating EK");
     uint32_t exp_EK;
     keystore.getCEK_RSA2048(&exp_EK);
@@ -496,6 +454,7 @@ static OS_Error_t exchange_keys(void) {
     Debug_LOG_DEBUG("EK created");
     Debug_DUMP_DEBUG(cEK_ssh, sizeof(cEK_ssh));
 
+    //3.- Connect to python client and send EK_pub, SRK_pub
     Debug_LOG_INFO("Establishing connection to python client on keyexchange port");
 
     ret = waitForNetworkStackInit(&networkStackCtx);
@@ -567,7 +526,7 @@ static OS_Error_t exchange_keys(void) {
 
     Debug_LOG_INFO("Public keys successfully sent");
 
-    //6.- receive response from python client
+    //6.- Receive response from python client
     Debug_LOG_INFO("Waiting for response from python client");
     static char buffer[OS_DATAPORT_DEFAULT_SIZE];
     char* position = buffer;
@@ -611,7 +570,7 @@ static OS_Error_t exchange_keys(void) {
     Debug_LOG_DEBUG("DUMPING RECEIVED CIPHERTEXT");
     Debug_DUMP_DEBUG(ciphertext, sizeof(ciphertext));
 
-    //7.- decrypt the ciphertext to get K_sym
+    //7.- Decrypt the ciphertext to get K_sym
     Debug_LOG_INFO("Decrypting symmetric key");
     Debug_LOG_DEBUG("Decrypting...\n len of cyphertext is %d", sizeof(ciphertext));
     int len = sizeof(ciphertext);
@@ -622,14 +581,11 @@ static OS_Error_t exchange_keys(void) {
         Debug_LOG_WARNING("Something might have gone wrong, received %d bytes instead of %d", len, 32);
     }
 
-    //following block is for debug purposes
     Debug_LOG_DEBUG("PRINTING THE RECEIVED KEY DATA!!!!!!!!!!!!!!");
     Debug_LOG_DEBUG("Key:");
     Debug_DUMP_DEBUG(OS_Dataport_getBuf(crypto.dataport), 32);
-    /*debug ends here*/
 
-
-    //8.- store K_sym in the keystore
+    //8.- Store K_sym in the keystore
     Debug_LOG_INFO("Storing key into the TPM");
     memmove(OS_Dataport_getBuf(keystore.dataport), OS_Dataport_getBuf(crypto.dataport), 32);
     hStoredKey = keystore.storeKey(32);
@@ -642,7 +598,6 @@ static OS_Error_t exchange_keys(void) {
     if(ret != OS_SUCCESS) {
         Debug_LOG_INFO("Failed to close socket after key exchange");
     }
-
 
     Debug_LOG_INFO("Key sucessfully exchanged");
     return OS_SUCCESS;
