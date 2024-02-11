@@ -266,11 +266,9 @@ secureCommunication_rpc_socket_read(
     OS_Socket_Handle_t apiHandle = {.ctx = networkStackCtx, .handleID = handle};
     uint8_t buf[OS_DATAPORT_DEFAULT_SIZE];
     uint8_t plaintext[OS_DATAPORT_DEFAULT_SIZE];
-    
-    uint8_t* position = buf;
     size_t read = 0;
 
-    ret = OS_Socket_read(apiHandle, position, sizeof(buf) - (position - buf), &read);
+    ret = OS_Socket_read(apiHandle, buf, sizeof(buf), &read);
     if(ret == OS_SUCCESS) {
         Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
     } else {
