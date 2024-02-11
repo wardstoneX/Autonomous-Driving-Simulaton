@@ -270,7 +270,7 @@ secureCommunication_rpc_socket_read(
     memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
     Debug_LOG_DEBUG("key loaded from TPM");
 
-    if(decrypt(hCrypto, K_sym, buf, read, plaintext, sizeof(plaintext)) != 0) {
+    if(decrypt_AES_GCM(hCrypto, K_sym, buf, read, plaintext, sizeof(plaintext)) != 0) {
         Debug_LOG_ERROR("There was an error when decrypting the received message");
         read = 0;
         memcpy(pLen, &read, sizeof(*pLen));
@@ -385,7 +385,7 @@ secureCommunication_rpc_socket_recvfrom(
     memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
     Debug_LOG_DEBUG("key loaded from TPM");
 
-    if(decrypt(hCrypto, K_sym, buf, read, plaintext, sizeof(plaintext)) != 0) {
+    if(decrypt_AES_GCM(hCrypto, K_sym, buf, read, plaintext, sizeof(plaintext)) != 0) {
         Debug_LOG_ERROR("There was an error when decrypting the received message");
         read = 0;
         memcpy(pLen, &read, sizeof(*pLen));

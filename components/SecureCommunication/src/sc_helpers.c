@@ -30,23 +30,21 @@ uint32_t encrypt_AES_GCM(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t*
 
     memcpy(payload, iv, 12);
 
+    //setting up K_sym for encryption
     OS_CryptoKey_Handle_t hKey;
-    //uint8_t keyArray[32];
-    //memcpy(keyArray, keyBytes, 32);
     static const OS_CryptoKey_Data_t aes256Data =
     {
         .type = OS_CryptoKey_TYPE_AES,
         .attribs.keepLocal = true,
-        //.data.aes.bytes = keyBytes,
         .data.aes.len    = 32
     };
     memcpy((uint8_t*) aes256Data.data.aes.bytes, keyBytes, 32);
-
     if(OS_CryptoKey_import(&hKey, hCrypto, &aes256Data) != OS_SUCCESS) {
         Debug_LOG_ERROR("There was an error importing the key");
         return -1;
     }
 
+    //encrypting
     OS_CryptoCipher_Handle_t hCipher;
     OS_CryptoCipher_init(&hCipher,
                         hCrypto,
@@ -66,7 +64,7 @@ uint32_t encrypt_AES_GCM(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t*
     return 0;
 }
 
-uint32_t decrypt(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t* ciphertext, size_t ciphertextLen, uint8_t* plaintext, size_t plaintextLen){
+uint32_t decrypt_AES_GCM(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t* ciphertext, size_t ciphertextLen, uint8_t* plaintext, size_t plaintextLen){
     if(plaintextLen < ciphertextLen - 12) {
         Debug_LOG_ERROR("The provided buffer is too small: it is %d bytes, has to be at least %d bytes", plaintextLen, ciphertextLen - 12);
         return -1;
@@ -79,6 +77,7 @@ uint32_t decrypt(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t* ciphert
     uint8_t iv[12];
     memcpy(iv, ciphertext, 12);
 
+    //setting up K_sym for decryption
     OS_CryptoKey_Handle_t hKey;
     static const OS_CryptoKey_Data_t aes256Data =
     {
@@ -87,12 +86,12 @@ uint32_t decrypt(OS_Crypto_Handle_t hCrypto, uint8_t* keyBytes, uint8_t* ciphert
         .data.aes.len    = 32
     };
     memcpy((uint8_t*) aes256Data.data.aes.bytes, keyBytes, 32);
-
     if(OS_CryptoKey_import(&hKey, hCrypto, &aes256Data) != OS_SUCCESS) {
         Debug_LOG_ERROR("There was an error importing the key");
         return -1;
     }
 
+    //decrypting
     OS_CryptoCipher_Handle_t hCipher;
     OS_CryptoCipher_init(&hCipher,
                         hCrypto,
