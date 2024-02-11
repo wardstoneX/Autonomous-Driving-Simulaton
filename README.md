@@ -97,8 +97,8 @@ And copy-paste the key into the prompt.
 Remember to remove the `#define CLEAR_TPM` and re-compile before running
 the application again.
 
-# Running the Python client
 
+# Setting up CARLA
 ## Installing CARLA Simulator
 
 Download the CARLA 0.9.10 from [Carla repository](https://github.com/carla-simulator/carla/blob/master/Docs/download.md). Extract the contents of the Tar file by running in the download directory:
@@ -107,13 +107,18 @@ Download the CARLA 0.9.10 from [Carla repository](https://github.com/carla-simul
 cd <Download Directory>
 tar -xvf CARLA_0.9.10.tar.gz -C <Desired Output Directory>
 ```
-Since the client library is inside an .egg file and we want to import this to our python file, we need to extract its contents and move it to the site-packages directory of python 3.7. Please make sure python 3.7 is installed before this step. 
-(check if this is the true file and try the commands)
+
+## Add CARLA client library to Python
+Since the client library is inside an .egg file and we want to import this to our python file, we need to extract its contents and move it to the site-packages  of python 3.7. Please make sure python 3.7 is installed before this step. 
+
 ```sh
 cd <Path To Carla directory>/PythonAPI/carla/dist
 unzip carla-0.9.11-py3.7-linux-x86_64.egg -d <HOME>/.local/lib/python3.7/site-packages
 ```
-"https://carla.readthedocs.io/en/latest/build_faq/#importerror-no-module-named-carla"
+If you are having problems while importing carla, please see [FAQ](https://carla.readthedocs.io/en/latest/build_faq/#importerror-no-module-named-carla).
+
+## Starting CARLA Simulator
+
 To start the simulator with low graphics setting, use the following commands:
 
 ```sh
@@ -121,18 +126,11 @@ cd <Extracted Folder>
 ./CarlaUE4.sh -quality-level=Low
 ```
 
-# Scenario files
-If you want to create a new scenario, plase create a text file in folder `pythonClient/scenarios`, in which you need to add some numbers in the following format x<sub>1</sub>-x<sub>2</sub>-...-x<sub>n</sub> where each x<sub>i</sub> is the position of a vehicle on the side of the road. The minimum allowed distance between x<sub>i</sub> and x<sub>i-1</sub> is 5.
+# Running the Python client
 
- Since the bounding box of the used vehicle is around 7 meters and a parking spot should have the minimum length of 1.5 * VehicleWidth, please make sure to type in the scenario file the minimum distance of 11  for the parking spot.
 
- The following scenarios are already supplied:
- 1) default_scenario.txt
- 2) scenario1.txt
- 3) scenario2.txt
- 4) scenario3.txt
 
-# Arguments for the `bridge.py`
+## Arguments for the `bridge.py`
 
 The program accepts the following command-line arguments:
 
@@ -154,13 +152,25 @@ python3.7 bridge.py  -s custom_scenario.txt
 ```
 
 Beware, only the map `Town06` is supported currently! Also change the server adress in system_config if you change the host server adress.
+
+## Scenario files
+
+If you want to create a new scenario, plase create a text file in folder `pythonClient/scenarios`, in which you need to add some numbers in the following format x<sub>1</sub>-x<sub>2</sub>-...-x<sub>n</sub> where each x<sub>i</sub> is the position of a vehicle on the side of the road. The minimum allowed distance between x<sub>i</sub> and x<sub>i-1</sub> is 5.
+
+ Since the bounding box of the used vehicle is around 7 meters and a parking spot should have the minimum length of 1.5 * VehicleWidth, please make sure to type in the scenario file the minimum distance of 11  for the parking spot.
+
+ The following scenarios are already supplied:
+
+ 1) default_scenario.txt
+ 2) scenario1.txt
+
 # Everything together
 
 
 1) Start the Carla simulator.
 2) Build and transfer to SD Card
 3) Setup the hardware and connect Raspberry Pi to a computer
-4) Run in a terminal `sudo picocom -b 115200 /dev/<Whateve you put here>`
+4) Run in a terminal `sudo picocom -b 115200 /dev/<Serial Device file>`
 5) Run in another terminal `python3.7 pythonClient/bridge.py` inside main project directoy
 6) Instert the SD Card into the Raspberry pi and unplug && replug the power cable
 
