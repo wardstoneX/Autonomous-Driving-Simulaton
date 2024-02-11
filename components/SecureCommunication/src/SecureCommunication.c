@@ -266,7 +266,6 @@ secureCommunication_rpc_socket_read(
     OS_Socket_Handle_t apiHandle = {.ctx = networkStackCtx, .handleID = handle};
     uint8_t buf[OS_DATAPORT_DEFAULT_SIZE];
     uint8_t plaintext[OS_DATAPORT_DEFAULT_SIZE];
-    size_t actualLen;
     
     uint8_t* position = buf;
     size_t read = 0;
@@ -280,14 +279,12 @@ secureCommunication_rpc_socket_read(
         return ret;
     }
 
-    //actualLen = position - buf;
-    actualLen = read;
-    Debug_LOG_DEBUG("GOT %d BYTES OF CIPHERTEXT", actualLen);
+    Debug_LOG_DEBUG("GOT %d BYTES OF CIPHERTEXT", read);
 
-    if(actualLen < 12) {
+    if(read < 12) {
         Debug_LOG_ERROR("Not enough bytes were read, read operation unsuccessful");
-        actualLen = 0;
-        memcpy(pLen, &actualLen, sizeof(*pLen));
+        read = 0;
+        memcpy(pLen, &read, sizeof(*pLen));
         return -1;
     }
 
@@ -296,25 +293,25 @@ secureCommunication_rpc_socket_read(
     uint8_t K_sym[keyLen];
     if(keystore.loadKey(hStoredKey, &keyLen) != 0 || keyLen != 32) {
         Debug_LOG_ERROR("There was an error when loading the symmetric key for encryption");
-        actualLen = 0;
-        memcpy(pLen, &actualLen, sizeof(*pLen));
+        read = 0;
+        memcpy(pLen, &read, sizeof(*pLen));
         return -1;
 
     }
     memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
     Debug_LOG_DEBUG("key loaded from TPM");
 
-    if(decrypt(hCrypto, K_sym, buf, actualLen, plaintext, sizeof(plaintext)) != 0) {
+    if(decrypt(hCrypto, K_sym, buf, read, plaintext, sizeof(plaintext)) != 0) {
         Debug_LOG_ERROR("There was an error when decrypting the received message");
-        actualLen = 0;
-        memcpy(pLen, &actualLen, sizeof(*pLen));
+        read = 0;
+        memcpy(pLen, &read, sizeof(*pLen));
         return -1;
     }
     Debug_LOG_DEBUG("message decrypted");
 
-    actualLen -= 12;
-    memmove(secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), plaintext, actualLen);
-    memmove(pLen, &actualLen, sizeof(*pLen));
+    read -= 12;
+    memmove(secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), plaintext, read);
+    memmove(pLen, &read, sizeof(*pLen));
     //NOTE: the Socket API only copies the data in the dataport if the return code is OS_SUCCESS
     return OS_SUCCESS;
 }
@@ -444,18 +441,14 @@ secureCommunication_rpc_socket_getStatus(
 
 
 
-//TODO: compare with networkStack implementation
 OS_Error_t
 secureCommunication_rpc_socket_getPendingEvents(
     size_t  bufSize,
     int*    pNumberOfEvents
 )
 {
-    CHECK_IS_RUNNING(OS_Socket_getStatus(&networkStackCtx));
-
-    uint8_t *buf = secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id());
-    OS_Error_t ret = OS_Socket_getPendingEvents(&networkStackCtx, buf, bufSize, pNumberOfEvents);
-    return ret;
+    Debug_LOG_WARNING("getPendingEvents() not implemented!");
+    return OS_ERROR_NOT_IMPLEMENTED;
 }
 
 
@@ -464,50 +457,6 @@ secureCommunication_rpc_socket_getPendingEvents(
 
 
 
-/**
- * NOTE: The following functions are not implemented evn though they are used by the Socket API. 
- * This most likely creates problems with OS_Socket_wait()
- */
-
-/*
-void
-secureCommunication_event_notify_wait(void){
-
-}
-
-int
-secureCommunication_event_notify_poll(void){
-    return -1;
-}
-
-int
-secureCommunication_event_notify_reg_callback(
-    void (*callback)(void*),
-    void* arg
-){
-    return -1;
-}
-
-int
-secureCommunication_shared_resource_mutex_lock(void){
-    return -1;
-}
-
-int
-secureCommunication_shared_resource_mutex_unlock(void){
-    return -1;
-}
-
-void*
-secureCommunication_rpc_get_buf(void){
-    return NULL;
-}
-
-size_t
-secureCommunication_rpc_get_size(void){
-    return 0;
-}
-*/
 
 
 
