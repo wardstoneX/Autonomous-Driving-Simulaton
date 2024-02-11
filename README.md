@@ -31,11 +31,11 @@ There is a pin header provided to help positioning. It is used like this:
 
 ## Ethernet
 
-Connect the Raspberry Pi and the PC using an ethernet cable. 
+Connect the Raspberry Pi and the PC using an ethernet cable. To do this, assign the static IP address 10.0.0.10 to the corresponding ethernet interface. This can be done temporarily with the following command:
+```sh
+ip addr add 10.0.0.10/24 dev <ethernet-interface-name>
+```
 
-###Todo either assign the ethernet adapter the ip adress 10.0.0.10, or 
-create something temporary
-we can run mirana`s command here to check if the correct ip is assigned
 # Compiling the TRENTOS application
 
 There are no additional dependencies or changes to the build process.
@@ -44,13 +44,13 @@ Just compile it as any other TRENTOS application:
 ```sh
 sdk/scripts/open_trentos_build_env.sh \
     sdk/build-system.sh \
-    sdk/demos/demo_tpm \
+    sdk/demos/demo_tum_course \
     rpi3 \
-    build-rpi3-Debug-demo_tpm \
+    build-rpi3-Debug-demo_tum_course \
     -DCMAKE_BUILD_TYPE=Debug
 ```
 
-If the project directory isn't named `sdk/demo/demo_tpm`, substitute that
+If the project directory isn't named `sdk/demo/demo_tum_course`, substitute that
 with its actual path.
 
 # Transferring the build files to SD Card
