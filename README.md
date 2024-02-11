@@ -113,13 +113,47 @@ Since the client library is inside an .egg file and we want to import this to ou
 cd <Path To Carla directory>/PythonAPI/carla/dist
 unzip carla-0.9.11-py3.7-linux-x86_64.egg -d <HOME>/.local/lib/python3.7/site-packages
 ```
-
+"https://carla.readthedocs.io/en/latest/build_faq/#importerror-no-module-named-carla"
 To start the simulator with low graphics setting, use the following commands:
 
 ```sh
 cd <Extracted Folder>
 ./CarlaUE4.sh -quality-level=Low
 ```
+
+# Scenario files
+If you want to create a new scenario, plase create a text file in folder `pythonClient/scenarios`, in which you need to add some numbers in the following format x<sub>1</sub>-x<sub>2</sub>-...-x<sub>n</sub> where each x<sub>i</sub> is the position of a vehicle on the side of the road. The minimum allowed distance between x<sub>i</sub> and x<sub>i-1</sub> is 5.
+
+ Since the bounding box of the used vehicle is around 7 meters and a parking spot should have the minimum length of 1.5 * VehicleWidth, please make sure to type in the scenario file the minimum distance of 11  for the parking spot.
+
+ The following scenarios are already supplied:
+ 1) default_scenario.txt
+ 2) scenario1.txt
+ 3) scenario2.txt
+ 4) scenario3.txt
+
+# Arguments for the `bridge.py`
+
+The program accepts the following command-line arguments:
+
+- `-hserv, --hostserver`: Hostname for the server (default: '10.0.0.10')
+- `-pserv, --portserver`: Port number for the server (default: 6000)
+- `-hsim, --hostsimulator`: Simulator host (default: 'localhost')
+- `-psim, --portsimulator`: Simulator port (default: 2000)
+- `-m, --map`: Simulator map (default: 'Town06')
+- `-s, --scenario`: Simulator scenario file (default: 'default_scenario.txt')
+
+### Example Usage
+
+```sh
+python3.7 bridge.py -hserv 10.0.0.20 -pserv 7000 -hsim localhost -psim 3000 -m Town07 -s custom_scenario.txt
+```
+
+```sh
+python3.7 bridge.py  -s custom_scenario.txt
+```
+
+Beware, only the map `Town06` is supported currently! Also change the server adress in system_config if you change the host server adress.
 # Everything together
 
 

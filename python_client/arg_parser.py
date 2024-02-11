@@ -1,6 +1,15 @@
 import argparse
 
 def parse_arguments():
+    """
+    Parse the arguments given to the program. The arguments are: 
+    -hserv, --hostserver: Hostname (default: localhost) 
+    -pserv, --portserver: Port number (default: 6000)
+    -hsim, --hostsimulator: Simulator Host (default: localhost)
+    -psim, --portsimulator: Simulator Port (default: 2000)
+    -m, --map: Simulator Map (default: Town06)
+    -s, --scenario: Simulator scenario (default: default_scenario.txt)
+    """
     parser = argparse.ArgumentParser(
     usage="%(prog)s [OPTION] [FILE]...",
     description="This is a node between the CARLA simulator and the Raspberry Pi. See project readme for more information.")
