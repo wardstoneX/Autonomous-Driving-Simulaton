@@ -36,7 +36,7 @@ def setup_crypto_config():
             if rec_digest != og_digest:
                 print(f"The received EK is not correct, rec_digest: {rec_digest}")
                 exit(1)
-
+            print("Verified cEK.")
             #5.- generate K_sym and encrypt: ciphertext = encrypt(EK_pub, encrypt(SRK_pub, K_sym))
             global K_sym
             K_sym = Random.get_random_bytes(32)
