@@ -18,7 +18,6 @@
 OS_Socket_Handle_t sock;
 if_TPMctrl_t tpmctrl = IF_TPMCTRL_ASSIGN(tpm_ctrl_rpc);
 
-struct Tuple midpoint;
 bool parkingSpotDetected = false;
 
 struct scv_vector *vector;
@@ -49,6 +48,11 @@ void park(OS_Socket_Handle_t sock) {
 
 }
 
+/*
+This method is used to check for parking space. It compares the current and the last detected vehicle position.
+If the distance between the two positions is greater than 12 meters, the parking spot has been found.
+If the distance is greater than 4 meters, a new vehicle has been detected.
+*/
 void checkForParking() {
     
     while(1) {
@@ -63,17 +67,19 @@ void checkForParking() {
         scv_pop_front(vector);
         scv_pop_front(vector_radar);
 
+        // Check if the tuple is a zero tuple
         if (isZeroTuple(*radarDetection)) {
             continue;
         }
 
+        // This  is the first time we detect a vehicle
         if (isZeroTuple(lastDetectedVehicle.mainVehiclePosition) && isZeroTuple(lastDetectedVehicle.OtherVehiclePosition)) {
             lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
             lastDetectedVehicle.mainVehiclePosition = *mainGNSSposition;
             Debug_LOG_INFO("Main vehicle at position (%f, %f, %f) detected another vehicle at position (%f, %f, %f)\n",mainGNSSposition->x, mainGNSSposition->y, mainGNSSposition->z, radarDetection->x, radarDetection->y, radarDetection->z);
             continue;
         }
-
+        // calculate the distance between the current and the last detected vehicle
         float distance = calculateEuclideanDistance(&lastDetectedVehicle.OtherVehiclePosition, radarDetection);
         Debug_LOG_INFO("Main vehicle at position (%f, %f, %f) detected another vehicle at position (%f, %f, %f)\n",mainGNSSposition->x, mainGNSSposition->y, mainGNSSposition->z, radarDetection->x, radarDetection->y, radarDetection->z);
 
@@ -88,24 +94,22 @@ void checkForParking() {
                 send_parameters(sock, 0.0, 0.0, 1.0, 0, 3);
                 Debug_LOG_INFO("The command to stop the main vehicle has been sent.\n");
 
-                // calculate the middle point of two detections here
-                midpoint = calculateMidpoint(&lastDetectedVehicle.mainVehiclePosition, &lastDetectedVehicle.OtherVehiclePosition);
-                
                 parkingSpotDetected = true;
-                //lastDetectedVehicle.OtherVehiclePosition = *radarDetection;
-                //lastDetectedVehicle.mainVehiclePosition = *mainGNSSposition;
-
                 return;
             } else {
                 continue;
 
             }
-            
         }
-
     }
 }
 
+/*
+This method is used to process the received buffer.
+It parses the received data and stores it in the data storage vectors.
+It calls the checkForParking method to check for parking space after processing the buffer.
+If a data pair is incomplete, it stores the leftover data and waits for the rest of the data pair to arrive.
+*/
 void process_buffer(char* buffer, ssize_t size) {
     int start = 0;
     while (start < size) {
@@ -128,7 +132,6 @@ void process_buffer(char* buffer, ssize_t size) {
 
             // Check for the end of the data pair
             if (buffer[start + 5 + data_size] != '\x14') {
-                //fprintf(stderr, "Error: Expected '\\x14' at the end of the data pair, but found '\\x%x'\n", buffer[start + 5 + data_size]);
                 break; // Wait for the rest of the message to arrive
             }
 
@@ -138,7 +141,6 @@ void process_buffer(char* buffer, ssize_t size) {
 
             struct Tuple radar, gnss;
             sscanf(data, "%f,%f,%f-%f,%f,%f", &radar.x, &radar.y, &radar.z, &gnss.x, &gnss.y, &gnss.z);
-            //printf(" GNSS: (%f, %f, %f)\n", gnss.x, gnss.y, gnss.z);
 
             scv_push_back(vector_radar, &radar);
             scv_push_back(vector, &gnss);
@@ -151,11 +153,8 @@ void process_buffer(char* buffer, ssize_t size) {
             start++;
         }
     }
-
     
     checkForParking();
-
-
 
     // Update the leftover data
     if (start < size) {
@@ -170,7 +169,6 @@ int run()
 {
     Debug_LOG_INFO("Starting test_app_server...");
 
-    // dont forget to clean the vectors at the end
     vector = scv_new(sizeof(struct Tuple), 1000);
     vector_radar = scv_new(sizeof(struct Tuple), 1000);
     Debug_LOG_INFO("Data storage vectors have been initialized.\n");
@@ -227,8 +225,7 @@ int run()
     size_t valread = 0;
 
     while (1) {
-
-        // break out if we detected parking spot
+        // Break out if we have already detected a parking spot
         if(parkingSpotDetected) {
             break;
         }
@@ -244,21 +241,21 @@ int run()
                 memcpy(temp, buffer, valread);
             }
             process_buffer(temp, valread + leftover_size);
-
         }
     }
-    Debug_LOG_INFO("Receiving sensor data is stopped.\n");
 
+    Debug_LOG_INFO("Receiving sensor data is stopped.\n");
 
     park(new_socket);
 
-
     send_parameters(new_socket,0.0, 0.0, 0.0,0, 0);
-    Debug_LOG_INFO("Parking completed.\n Command to end simulation has been sent.\n");
+    Debug_LOG_INFO("Command to end simulation has been sent.\n");
 
     OS_Socket_close(new_socket);
     Debug_LOG_INFO("The socket is closed.\n");
+
     tpmctrl.shutdown();
+
     scv_delete(vector);
     scv_delete(vector_radar);
     Debug_LOG_INFO("Data storage vectors have been deleted.");

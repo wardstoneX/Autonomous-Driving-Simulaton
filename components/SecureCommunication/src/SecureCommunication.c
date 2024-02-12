@@ -31,36 +31,14 @@ static const OS_Crypto_Config_t cryptoCfg =
         entropy_rpc,
         entropy_dp),
 };
-
-
-
-/*
-// Definition of a key-generation spec for a 256-bit AES key
-static OS_CryptoKey_Spec_t aes_spec = {
-    .type = OS_CryptoKey_SPECTYPE_BITS,
-    .key = {
-        .type = OS_CryptoKey_TYPE_AES,
-        .params.bits = 256
-    }
-};
-*/
-
-
-
-
 static OS_Crypto_Handle_t hCrypto;
-
 
 if_OS_Entropy_t entropy = IF_OS_ENTROPY_ASSIGN(entropy_rpc, entropy_dp);
 if_KeyStore_t keystore = IF_KEYSTORE_ASSIGN(keystore_rpc, keystore_dp);
 if_Crypto_t crypto = IF_CRYPTO_ASSIGN(crypto_rpc, crypto_dp);
 
-static uint32_t hStoredKey;
-
 static int is_initialized = 0;
-
-
-
+static uint32_t hStoredKey;
 
 
 //------------------------------------------------------------------------------
@@ -86,12 +64,6 @@ void post_init(void) {
 
 
 
-
-
-
-
-
-
 //----------------------------------------------------------------------
 // if_OS_Socket
 //----------------------------------------------------------------------
@@ -107,7 +79,7 @@ secureCommunication_rpc_socket_create(
         Debug_LOG_INFO("STARTING KEY EXCHANGE");
         is_initialized = exchange_keys() == OS_SUCCESS;
         if (!is_initialized) {
-            Debug_LOG_ERROR("KEy exchange failed, aborting");
+            Debug_LOG_ERROR("Key exchange failed, aborting");
             exit(1);
         }
     }
@@ -201,7 +173,6 @@ secureCommunication_rpc_socket_close(
 }
 
 
-//TODO: compare with networkStack implementation
 OS_Error_t
 secureCommunication_rpc_socket_write(
     const int    handle,
@@ -247,7 +218,7 @@ secureCommunication_rpc_socket_write(
     size_t sentLength;
     ret = OS_Socket_write(apiHandle, payload, 12 + *pLen, &sentLength);
     
-    printf("%d of %d bytes sent succesfully.", sentLength, *pLen);
+    Debug_LOG_DEBUG("%d of %d bytes sent succesfully.", sentLength, 12 + *pLen);
     *pLen = sentLength - 12;
 
     return ret;
@@ -266,12 +237,9 @@ secureCommunication_rpc_socket_read(
     OS_Socket_Handle_t apiHandle = {.ctx = networkStackCtx, .handleID = handle};
     uint8_t buf[OS_DATAPORT_DEFAULT_SIZE];
     uint8_t plaintext[OS_DATAPORT_DEFAULT_SIZE];
-    size_t actualLen;
-    
-    uint8_t* position = buf;
     size_t read = 0;
 
-    ret = OS_Socket_read(apiHandle, position, sizeof(buf) - (position - buf), &read);
+    ret = OS_Socket_read(apiHandle, buf, 12 + *pLen, &read);
     if(ret == OS_SUCCESS) {
         Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
     } else {
@@ -280,14 +248,12 @@ secureCommunication_rpc_socket_read(
         return ret;
     }
 
-    //actualLen = position - buf;
-    actualLen = read;
-    Debug_LOG_DEBUG("GOT %d BYTES OF CIPHERTEXT", actualLen);
+    Debug_LOG_DEBUG("GOT %d BYTES OF CIPHERTEXT", read);
 
-    if(actualLen < 12) {
+    if(read < 12) {
         Debug_LOG_ERROR("Not enough bytes were read, read operation unsuccessful");
-        actualLen = 0;
-        memcpy(pLen, &actualLen, sizeof(*pLen));
+        read = 0;
+        memcpy(pLen, &read, sizeof(*pLen));
         return -1;
     }
 
@@ -296,25 +262,25 @@ secureCommunication_rpc_socket_read(
     uint8_t K_sym[keyLen];
     if(keystore.loadKey(hStoredKey, &keyLen) != 0 || keyLen != 32) {
         Debug_LOG_ERROR("There was an error when loading the symmetric key for encryption");
-        actualLen = 0;
-        memcpy(pLen, &actualLen, sizeof(*pLen));
+        read = 0;
+        memcpy(pLen, &read, sizeof(*pLen));
         return -1;
 
     }
     memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
     Debug_LOG_DEBUG("key loaded from TPM");
 
-    if(decrypt(hCrypto, K_sym, buf, actualLen, plaintext, sizeof(plaintext)) != 0) {
+    if(decrypt_AES_GCM(hCrypto, K_sym, buf, read, plaintext, sizeof(plaintext)) != 0) {
         Debug_LOG_ERROR("There was an error when decrypting the received message");
-        actualLen = 0;
-        memcpy(pLen, &actualLen, sizeof(*pLen));
+        read = 0;
+        memcpy(pLen, &read, sizeof(*pLen));
         return -1;
     }
     Debug_LOG_DEBUG("message decrypted");
 
-    actualLen -= 12;
-    memmove(secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), plaintext, actualLen);
-    memmove(pLen, &actualLen, sizeof(*pLen));
+    read -= 12;
+    memmove(secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), plaintext, read);
+    memmove(pLen, &read, sizeof(*pLen));
     //NOTE: the Socket API only copies the data in the dataport if the return code is OS_SUCCESS
     return OS_SUCCESS;
 }
@@ -327,12 +293,52 @@ secureCommunication_rpc_socket_sendto(
     const OS_Socket_Addr_t* const dstAddr
 )
 {
-    Debug_LOG_WARNING("sendto() is not implemented in the SecureCommunication component, use write() instead.");
-    return OS_ERROR_NOT_IMPLEMENTED;
+    OS_Error_t ret;
+    CHECK_IS_RUNNING(OS_Socket_getStatus(&networkStackCtx));
+    OS_Socket_Handle_t apiHandle = {.ctx = networkStackCtx, .handleID = handle};
+
+    uint8_t plaintext[*pLen];
+    memcpy(plaintext, secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), *pLen);
+    Debug_LOG_DEBUG("Got %d bytes of plaintext:", *pLen);
+    Debug_DUMP_DEBUG(plaintext, *pLen);
+
+    uint32_t keyLen = 32;
+    uint8_t K_sym[keyLen];
+    if(keystore.loadKey(hStoredKey, &keyLen) != 0 || keyLen != 32) {
+        Debug_LOG_ERROR("There was an error when loading the symmetric key for encryption");
+        return -1;
+    }
+    memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
+    Debug_LOG_DEBUG("Read symmetric key from NV storage");
+
+    uint8_t iv[12];
+    if(12 != entropy.read(12)){
+        Debug_LOG_ERROR("There was an error when generating the IV for encryption");
+        return -1;
+    }
+    memcpy(iv, OS_Dataport_getBuf(entropy.dataport), 12);
+    Debug_LOG_DEBUG("Read IV from TPM");
+    Debug_DUMP_DEBUG(iv, 12);
+
+    size_t outputsize = OS_DATAPORT_DEFAULT_SIZE;
+    uint8_t payload[outputsize];
+    if(encrypt_AES_GCM(hCrypto, K_sym, plaintext, *pLen, iv, payload, outputsize) != 0) {
+        Debug_LOG_ERROR("There was an error when encrypting the message");
+        return -1;
+    }
+    Debug_LOG_DEBUG("Encrypted message.");
+    Debug_DUMP_DEBUG(payload, 12 + *pLen);
+
+    size_t sentLength;
+    ret = OS_Socket_sendto(apiHandle, payload, 12 + *pLen, &sentLength, dstAddr);
+    
+    Debug_LOG_DEBUG("%d of %d bytes sent succesfully.", sentLength, 12 + *pLen);
+    *pLen = sentLength - 12;
+
+    return ret;
 }
 
 
-//TODO: compare with networkStack implementation
 OS_Error_t
 secureCommunication_rpc_socket_recvfrom(
     int                 handle,
@@ -346,89 +352,50 @@ secureCommunication_rpc_socket_recvfrom(
     OS_Socket_Handle_t apiHandle = {.ctx = networkStackCtx, .handleID = handle};
     uint8_t buf[OS_DATAPORT_DEFAULT_SIZE];
     uint8_t plaintext[OS_DATAPORT_DEFAULT_SIZE];
-    size_t actualLen;
-    
-
-/*RECEIVING DATA FROM THE NETWORK STACK*/
-    /**
-     * The socket we get is of type STREAM (used for TCP connections)
-     * Therefore, the call we make to the network stack is OS_Socket_read() instead of _recvfrom()
-     * because _recvfrom() would expect a socket of type DGRAM (used for UDP connections)
-     */
-    uint8_t* position = buf;
     size_t read = 0;
 
-    do {
-        seL4_Yield();
-        ret = OS_Socket_read(apiHandle, position, sizeof(buf) - (position - buf), &read);
-
+    ret = OS_Socket_recvfrom(apiHandle, buf, 12 + *pLen, &read, srcAddr);
+    if(ret == OS_SUCCESS) {
         Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
+    } else {
+        read = 0;
+        memcpy(pLen, &read, sizeof(*pLen));
+        return ret;
+    }
 
-        switch (ret)
-        {
-        case OS_SUCCESS:
-            position = &position[read];
-            break;
-        case OS_ERROR_TRY_AGAIN:
-            Debug_LOG_WARNING("OS_Socket_read() reported try again");
-            continue;
-        case OS_ERROR_CONNECTION_CLOSED:
-            Debug_LOG_WARNING("connection closed");
-            read = 0;
-            /*
-            memmove(pLen, &read, sizeof(*pLen));
-            return ret;
-            */
-        case OS_ERROR_NETWORK_CONN_SHUTDOWN:
-            Debug_LOG_WARNING("connection shut down");
-            read = 0;
-            /*
-            memmove(pLen, &read, sizeof(*pLen));
-            return ret;
-            */
-        default:
-            Debug_LOG_ERROR("Message retrieval failed while reading, "
-                            "OS_Socket_read() returned error code %d, bytes read %zu",
-                            ret, (size_t) (position - buf));
-            read = 0;
-            /*
-            memmove(pLen, &read, sizeof(*pLen));
-            return ret;
-            */
-        }
-    } while (read > 0 || ret == OS_ERROR_TRY_AGAIN);
+    Debug_LOG_DEBUG("GOT %d BYTES OF CIPHERTEXT", read);
 
-    actualLen = position - buf;
-    Debug_LOG_DEBUG("GOT %d BYTES OF CIPHERTEXT", actualLen);
-
-    if(actualLen < 12) {
+    if(read < 12) {
         Debug_LOG_ERROR("Not enough bytes were read, read operation unsuccessful");
-        actualLen = 0;
-        memcpy(pLen, &actualLen, sizeof(*pLen));
+        read = 0;
+        memcpy(pLen, &read, sizeof(*pLen));
         return -1;
     }
 
-    uint8_t* K_sym = malloc(32);
+    Debug_LOG_DEBUG("loading key from TPM");
     uint32_t keyLen = 32;
+    uint8_t K_sym[keyLen];
     if(keystore.loadKey(hStoredKey, &keyLen) != 0 || keyLen != 32) {
         Debug_LOG_ERROR("There was an error when loading the symmetric key for encryption");
-        actualLen = 0;
-        memcpy(pLen, &actualLen, sizeof(*pLen));
+        read = 0;
+        memcpy(pLen, &read, sizeof(*pLen));
         return -1;
 
     }
     memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
+    Debug_LOG_DEBUG("key loaded from TPM");
 
-    if(decrypt(hCrypto, K_sym, buf, actualLen, plaintext, sizeof(plaintext)) != 0) {
+    if(decrypt_AES_GCM(hCrypto, K_sym, buf, read, plaintext, sizeof(plaintext)) != 0) {
         Debug_LOG_ERROR("There was an error when decrypting the received message");
-        actualLen = 0;
-        memcpy(pLen, &actualLen, sizeof(*pLen));
+        read = 0;
+        memcpy(pLen, &read, sizeof(*pLen));
         return -1;
     }
+    Debug_LOG_DEBUG("message decrypted");
 
-    actualLen -= 12;
-    memmove(secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), plaintext, actualLen);
-    memmove(pLen, &actualLen, sizeof(*pLen));
+    read -= 12;
+    memmove(secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id()), plaintext, read);
+    memmove(pLen, &read, sizeof(*pLen));
     //NOTE: the Socket API only copies the data in the dataport if the return code is OS_SUCCESS
     return OS_SUCCESS;
 }
@@ -443,73 +410,15 @@ secureCommunication_rpc_socket_getStatus(
 }
 
 
-
-//TODO: compare with networkStack implementation
 OS_Error_t
 secureCommunication_rpc_socket_getPendingEvents(
     size_t  bufSize,
     int*    pNumberOfEvents
 )
 {
-    CHECK_IS_RUNNING(OS_Socket_getStatus(&networkStackCtx));
-
-    uint8_t *buf = secureCommunication_rpc_buf(secureCommunication_rpc_get_sender_id());
-    OS_Error_t ret = OS_Socket_getPendingEvents(&networkStackCtx, buf, bufSize, pNumberOfEvents);
-    return ret;
+    Debug_LOG_WARNING("getPendingEvents() not implemented!");
+    return OS_ERROR_NOT_IMPLEMENTED;
 }
-
-
-
-
-
-
-
-/**
- * NOTE: The following functions are not implemented evn though they are used by the Socket API. 
- * This most likely creates problems with OS_Socket_wait()
- */
-
-/*
-void
-secureCommunication_event_notify_wait(void){
-
-}
-
-int
-secureCommunication_event_notify_poll(void){
-    return -1;
-}
-
-int
-secureCommunication_event_notify_reg_callback(
-    void (*callback)(void*),
-    void* arg
-){
-    return -1;
-}
-
-int
-secureCommunication_shared_resource_mutex_lock(void){
-    return -1;
-}
-
-int
-secureCommunication_shared_resource_mutex_unlock(void){
-    return -1;
-}
-
-void*
-secureCommunication_rpc_get_buf(void){
-    return NULL;
-}
-
-size_t
-secureCommunication_rpc_get_size(void){
-    return 0;
-}
-*/
-
-
 
 
 
@@ -517,14 +426,11 @@ secureCommunication_rpc_get_size(void){
 // Other functions
 //----------------------------------------------------------------------
 
-
-
-
 static OS_Error_t exchange_keys(void) {
     Debug_LOG_INFO("KEY EXCHANGE ALGORITHM CALLED");
     OS_Error_t ret;
 
-    //2.- create new srk
+    //2.- Create new srk and ek
     Debug_LOG_DEBUG("Creating SRK");
     uint32_t exp_SRK;
     keystore.getCSRK_RSA1024(&exp_SRK);
@@ -537,7 +443,6 @@ static OS_Error_t exchange_keys(void) {
     Debug_LOG_DEBUG("SRK created");
     Debug_DUMP_DEBUG(cSRK_ssh, sizeof(cSRK_ssh));
 
-    //3.- connect to python client and send EK_pub, SRK_pub
     Debug_LOG_DEBUG("Creating EK");
     uint32_t exp_EK;
     keystore.getCEK_RSA2048(&exp_EK);
@@ -549,6 +454,7 @@ static OS_Error_t exchange_keys(void) {
     Debug_LOG_DEBUG("EK created");
     Debug_DUMP_DEBUG(cEK_ssh, sizeof(cEK_ssh));
 
+    //3.- Connect to python client and send EK_pub, SRK_pub
     Debug_LOG_INFO("Establishing connection to python client on keyexchange port");
 
     ret = waitForNetworkStackInit(&networkStackCtx);
@@ -620,7 +526,7 @@ static OS_Error_t exchange_keys(void) {
 
     Debug_LOG_INFO("Public keys successfully sent");
 
-    //6.- receive response from python client
+    //6.- Receive response from python client
     Debug_LOG_INFO("Waiting for response from python client");
     static char buffer[OS_DATAPORT_DEFAULT_SIZE];
     char* position = buffer;
@@ -664,7 +570,7 @@ static OS_Error_t exchange_keys(void) {
     Debug_LOG_DEBUG("DUMPING RECEIVED CIPHERTEXT");
     Debug_DUMP_DEBUG(ciphertext, sizeof(ciphertext));
 
-    //7.- decrypt the ciphertext to get K_sym
+    //7.- Decrypt the ciphertext to get K_sym
     Debug_LOG_INFO("Decrypting symmetric key");
     Debug_LOG_DEBUG("Decrypting...\n len of cyphertext is %d", sizeof(ciphertext));
     int len = sizeof(ciphertext);
@@ -675,14 +581,11 @@ static OS_Error_t exchange_keys(void) {
         Debug_LOG_WARNING("Something might have gone wrong, received %d bytes instead of %d", len, 32);
     }
 
-    //following block is for debug purposes
     Debug_LOG_DEBUG("PRINTING THE RECEIVED KEY DATA!!!!!!!!!!!!!!");
     Debug_LOG_DEBUG("Key:");
     Debug_DUMP_DEBUG(OS_Dataport_getBuf(crypto.dataport), 32);
-    /*debug ends here*/
 
-
-    //8.- store K_sym in the keystore
+    //8.- Store K_sym in the keystore
     Debug_LOG_INFO("Storing key into the TPM");
     memmove(OS_Dataport_getBuf(keystore.dataport), OS_Dataport_getBuf(crypto.dataport), 32);
     hStoredKey = keystore.storeKey(32);
@@ -691,25 +594,11 @@ static OS_Error_t exchange_keys(void) {
         return -1;
     }  
 
-/*start of debug*/
-    uint8_t* K_sym = malloc(32);
-    uint32_t keyLen = 32;
-    if(keystore.loadKey(hStoredKey, &keyLen) != 0 || keyLen != 32) {
-        Debug_LOG_ERROR("There was an error when loading the symmetric key for encryption");
-        return -1;
-    }
-    memcpy(K_sym, OS_Dataport_getBuf(keystore.dataport), 32);
-    Debug_LOG_DEBUG("dumping key loaded back from TPM");
-    Debug_DUMP_DEBUG(K_sym, 32);
-    /*end of debug*/
-
     ret = OS_Socket_close(hSocket);
     if(ret != OS_SUCCESS) {
         Debug_LOG_INFO("Failed to close socket after key exchange");
     }
 
-
-     
     Debug_LOG_INFO("Key sucessfully exchanged");
     return OS_SUCCESS;
 }

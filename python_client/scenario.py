@@ -6,6 +6,9 @@ from utils import GNSSHandler, RadarHandler, read_offsets_from_file
 from arg_parser import parse_arguments
 
 class ScenarioSetup():
+    """
+    This class is used to set up the scenario for the simulation.
+    """
     Y1_POSITION = 237.5
     Y2_POSITION = 244.5
     Y3_POSITION = 251.5
@@ -42,6 +45,7 @@ class ScenarioSetup():
     def initialize_scenario(self):
         print("Initializing the scenario...")
         self.change_map(self.map)
+        self.setup_spectator()
         self.setup_vehicles()
         self.sensor_setup()
         self.start_threads()    
@@ -70,18 +74,28 @@ class ScenarioSetup():
         self.control_data_receiver.start()
         
     def apply_control(self, control_data):
+        """
+        This method applies the control data to the main vehicle.
+        """
         print(f"Applying control {control_data}.")
         self.main_vehicle.apply_control(carla.VehicleControl(throttle=control_data.throttle,
                                                        steer=control_data.steer,
                                                        brake=control_data.brake,
                                                        reverse=control_data.reverse))  
     def brake(self):
+        """
+        This method applies the brake to the main vehicle.
+        """
         print("Applying brake.")
         self.main_vehicle.apply_control(carla.VehicleControl(throttle=0,
                                                        steer=0,
                                                        brake=1))    
           
     def change_map(self, map_name):
+        """
+        This method changes the map to the given map name.
+        Only 'Town06' is supported.
+        """
         if map_name != 'Town06':
             raise ValueError("Invalid map name. Only 'Town06' is supported.")
         
@@ -96,6 +110,8 @@ class ScenarioSetup():
             time.sleep(5)
             self.client.set_timeout(5.0)
     def sensor_setup(self):
+        """
+        This method sets up the sensors for the scenario."""
         gnss_blueprint = self.blueprint_library.find('sensor.other.gnss')
         gnss_blueprint.set_attribute('sensor_tick', '0.1')
         gnss_sensor = self.world.spawn_actor(gnss_blueprint, carla.Transform(), attach_to=self.main_vehicle)
@@ -116,13 +132,18 @@ class ScenarioSetup():
         gnss_sensor.listen(lambda data: self.gnss_handler.gnss_callback(data))   
         
         print( "Sensors have been set up.")
-             
-    def setup_vehicles(self):
+    def setup_spectator(self):
+        """
+        This method sets up the spectator for the scenario.
+        """
         spectator = self.world.get_spectator()
         transform = carla.Transform(carla.Location(x=130, y=self.Y2_POSITION, z=62), carla.Rotation(pitch=-90, yaw=0, roll=0))
         spectator.set_transform(transform)
-        print(f"Spectator Transform is set.")
-        
+        print(f"Spectator Transform is set.")        
+    def setup_vehicles(self):
+        """
+        This method sets up the vehicles for the scenario.
+        """
         for x_offset in self.simulator_scenario:
             transform = carla.Transform(
             carla.Location(x=self.X_POSITION + x_offset, y=self.Y3_POSITION, z=self.Z_POSITION),

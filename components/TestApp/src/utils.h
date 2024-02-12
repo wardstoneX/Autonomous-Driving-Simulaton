@@ -47,10 +47,9 @@ struct PairOfTuples {
 
 struct PairOfTuples lastDetectedVehicle;
 
+
 bool isZeroTuple(struct Tuple tuple);
 float calculateEuclideanDistance(struct Tuple* tuple1, struct Tuple*tuple2);
-double predict_power(double x);
-struct Tuple calculateMidpoint(struct Tuple *point1, struct Tuple *point2);
 void send_control_data(OS_Socket_Handle_t sock, struct ControlData data);
 void send_parameters(OS_Socket_Handle_t sock, float throttle, float steer, float brake, int reverse, float time);
 

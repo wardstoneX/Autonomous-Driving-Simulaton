@@ -7,12 +7,21 @@ from collections import namedtuple
 import struct
 from secureClient import setup_crypto_config, send_encrypt, recv_decrypt
 
-
+# ControlData is a named tuple that contains the control data received from the client.
 ControlData = namedtuple('ControlData', 'throttle steer brake reverse time')
+
+# MAX_DATA_POINTS is the number of data points that can be sent to the server at once.
 MAX_DATA_POINTS = 8
+
+# SEND_INTERVAL is the interval at which the thread tries to send the data to the server.
 SEND_INTERVAL = 0.4     
 
 def start_server(host, port):
+    """
+    This function starts the server and listens for a connection from the TestApp client.
+    TcpNoDelay is set to 1 to disable Nagle's algorithm.
+    The key exchange is done using the secureClient.py file.
+    """
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((host, port))
     server_socket.listen(1)
@@ -23,8 +32,20 @@ def start_server(host, port):
     return client_socket
 
 def send_to_server(connection_socket,data1, data2):
+    """
+    This function sends the data to the server. The data is sent in the following format:
+    - 1 byte: Start of data pair (0x13)
+    - 4 bytes: Length of the data pair size( "-" included)
+    - n bytes: Data pair encoded in utf-8
+    - 1 byte: End of data pair (0x14)
+    If the TestApp client finished sending the commands
+    and we try to send data to the server, a BrokenPipeError is raised.
+    We can just ignore it.
+    The code is inspired from the following links:
+    https://code.activestate.com/recipes/408859-socketrecv-three-ways-to-turn-it-into-recvall/
+    https://thoslin.github.io/build-a-simple-protocol-over-tcp/"""
+    
     data_str = b""
-
     for i in range(len(data1)):
         radar = data1[i]
         gnss = data2[i]
@@ -44,11 +65,19 @@ def send_to_server(connection_socket,data1, data2):
         
 
 class ControlDataReceiver(threading.Thread):
+    """
+    This thread class is used to receive the control data from the TestApp client.
+    It runs alongside the main thread and listens for the control data.
+    The control data is received in the following format:
+    - 4 floats: throttle, steer, brake, time
+    - 1 int: reverse
+    The control data is then put into a queue.
+    """
     def __init__(self, connection_socket):
         super().__init__()
         self.connection_socket = connection_socket
         self.control_data_queue = queue.Queue()
-        self.format = 'fffif'  # 4 floats, 1 bool, 1 int
+        self.format = 'fffif'  
         self.tuple_size = struct.calcsize(self.format)
         self.leftover_data = b''
         self.stop_event = threading.Event()
@@ -76,6 +105,12 @@ class ControlDataReceiver(threading.Thread):
             self.join()
 
 class SensorDataSender(threading.Thread):
+    """
+    This thread class is used to send the sensor data to the server.
+    It runs alongside the main thread and sends the sensor data to the server.
+    At each interval, it locks the sensor lists and checks if the lists have enough data in it.
+    If the lists have enough data, it sends the data to the server.
+    """
     def __init__(self,connection_socket, gnss_handler, radar_handler):
         super().__init__()
         self.connection_socket = connection_socket
