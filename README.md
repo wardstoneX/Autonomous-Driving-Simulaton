@@ -44,14 +44,14 @@ Just compile it as any other TRENTOS application:
 ```sh
 sdk/scripts/open_trentos_build_env.sh \
     sdk/build-system.sh \
-    sdk/demos/demo_tum_course \
+    ws2023_team_3_ads_tpm \
     rpi3 \
-    build-rpi3-Debug-demo_tum_course \
+    build-rpi3-ws2023_team_3_ads_tpm \
     -DCMAKE_BUILD_TYPE=Debug
 ```
 
-If the project directory isn't named `sdk/demo/demo_tum_course`, substitute that
-with its actual path.
+If the project directory isn't named `ws2023_team_3_ads_tpm`, substitute that
+with its actual path. It would be best to clone the project to the main Trentos folder.
 
 # Transferring the build files to SD Card
 After inserting the SD card to the computer, please run the following commands:
@@ -64,7 +64,8 @@ sync
 umount <SD Card mount>
 ```
 To find the SD Card mount, the command `df -h` can be used.
-
+# Finding the right device file
+After connecting the Raspberry Pi to the computer, if picocom doesn't work with the default device file `/dev/ttyUSB0`, please check which device file was added to `/dev` folder after plugging the rspi.
 # Generating and importing a new cEK
 
 If TRENTOS application is run for the first time on a particular TPM, it's
@@ -101,7 +102,7 @@ the application again.
 # Setting up CARLA
 ## Installing CARLA Simulator
 
-Download the CARLA 0.9.10 from [Carla repository](https://github.com/carla-simulator/carla/blob/master/Docs/download.md). Extract the contents of the Tar file by running in the download directory:
+Download the CARLA 0.9.10 from [Carla repository](https://github.com/carla-simulator/carla/blob/master/Docs/download.md). Extract the contents of the Tar file by running:
 
 ```sh
 cd <Download Directory>
@@ -113,16 +114,16 @@ Since the client library is inside an .egg file and we want to import this to ou
 
 ```sh
 cd <Path To Carla directory>/PythonAPI/carla/dist
-unzip carla-0.9.11-py3.7-linux-x86_64.egg -d <HOME>/.local/lib/python3.7/site-packages
+unzip carla-0.9.10-py3.7-linux-x86_64.egg -d <Python3.7 site-packages directory>
 ```
-If you are having problems while importing carla, please see [FAQ](https://carla.readthedocs.io/en/latest/build_faq/#importerror-no-module-named-carla).
+If you are having problems while importing carla, please see [FAQ](https://carla.readthedocs.io/en/latest/build_faq/#importerror-no-module-named-carla). The egg file name in the unzip command may need to be changed.
 
 ## Starting CARLA Simulator
 
 To start the simulator with low graphics setting, use the following commands:
 
 ```sh
-cd <Extracted Folder>
+cd <Path To Carla directory>
 ./CarlaUE4.sh -quality-level=Low
 ```
 
@@ -161,16 +162,21 @@ If you want to create a new scenario, plase create a text file in folder `python
 
  The following scenarios are already supplied:
 
- 1) default_scenario.txt
- 2) scenario1.txt
+ 1) **default_scenario.txt**
+ ![](pictures/default_scenario.png)
+
+
+
+ 2) **scenario1.txt**
+ ![](pictures/example_scenario.png)
 
 # Everything together
 
 
 1) Start the Carla simulator.
 2) Build and transfer to SD Card
-3) Setup the hardware and connect Raspberry Pi to a computer
+3) Setup the hardware
 4) Run in a terminal `sudo picocom -b 115200 /dev/<Serial Device file>`
 5) Run in another terminal `python3.7 pythonClient/bridge.py` inside main project directoy
-6) Instert the SD Card into the Raspberry pi and unplug && replug the power cable
+6) Instert the SD Card into the Raspberry pi and flash it by unplugging && replugging the power cable
 
