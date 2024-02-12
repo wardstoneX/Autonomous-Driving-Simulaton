@@ -161,7 +161,14 @@ python3.7 bridge.py  -s custom_scenario.txt
 Beware, only the map `Town06` is supported currently! Also change the server adress in system_config if you change the host server adress.
 
 ## Scenario files
- ![](pictures/layout_explanation.jpeg)
+
+
+<p align="center">
+  <img width="460" height="600" src="pictures/layout_explanation.jpeg">
+  <br>
+  <i>Layout Illustration</i>
+</p>
+
 
 
 If you want to create a new scenario, plase create a text file in folder `pythonClient/scenarios`, in which you need to add some numbers in the following format x<sub>1</sub>-x<sub>2</sub>-...-x<sub>n</sub> where each x<sub>i</sub> is the position of a vehicle on the side of the road. The minimum allowed distance between x<sub>i</sub> and x<sub>i-1</sub> is 5.
