@@ -97,7 +97,7 @@ This call will connect to a socket, but contrary to NetworkStack_PicoTcp's imple
 These functions encrypt the data to be sent using AES256 in GCM mode. For this, an arbitrary 12-byte long IV is generated and used in conjunction with the previously exchanged symmetric key. The generated IV is appended to the beginning of the message that is then forwarded to the underlying NetworkStack_PicoTcp component using the corresponding write/sendto call.
 
 ### OS_Socket_read() and OS_Socket_recvfrom()
-These functions decrypt data received from the corresponding read/recvfrom call to the NetworkStack_PicoTcp commponent. The first 12 bytes of data are interpreted as the IV, which is used to decrypt the remaining bytes using AES256 in GCM mode with the previously exchanged symmetric key.
+These functions decrypt data received from the corresponding read/recvfrom call to the NetworkStack_PicoTcp commponent. These calls in the SecureCommunication component request 12 bytes more from the network stack than what the client component requests. This way, the first 12 bytes of data are interpreted as the IV, which is used to decrypt the remaining bytes using AES256 in GCM mode with the previously exchanged symmetric key.
 
 ### OS_Socket_getStatus()
 The return value of this function is the status of the underlying NetworkStack_PicoTcp component.
