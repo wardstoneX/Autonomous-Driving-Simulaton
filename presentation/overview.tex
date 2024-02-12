@@ -1,15 +1,15 @@
 \section{Overview}
 
-\begin{frame}{Overall concept: CARLA}
+\begin{frame}{Overall concept: Autonomous driving}
 \begin{itemize}
-\item CARLA (autonomous simulator) running on PC
+\item CARLA (autonomous driving simulator) running on PC
 \item Python client receives environment data from CARLA and sends it to Raspberry Pi
 \item \texttt{TestApp} component decides how to drive, and sends it back to Python client
 \item Communication must happen \textbf{securely}\ldots
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Overall concept: Secure Communication}
+\begin{frame}{Overall concept: Secure communication}
 \begin{itemize}
 \item (Symmetrically) \textbf{encrypted} sockets, provided by our \texttt{SecureCommunication} component
 \item \textbf{Key exchange} using asymmetric encryption
