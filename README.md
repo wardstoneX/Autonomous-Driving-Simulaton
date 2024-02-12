@@ -113,20 +113,7 @@ And copy-paste the key into the prompt.
 Remember to remove the `#define CLEAR_TPM` and re-compile before running
 the application again.
 
-# Running the setup
-
-## Starting CARLA Simulator
-
-To start the simulator with low graphics setting, use the following commands:
-
-```sh
-cd <Path To Carla directory>
-./CarlaUE4.sh -quality-level=Low
-```
-
-# TRENTOS application
-
-## Compiling the TRENTOS application
+# Compiling the TRENTOS application
 
 There are no additional dependencies or changes to the build process.
 Just compile it as any other TRENTOS application:
@@ -143,6 +130,17 @@ sdk/scripts/open_trentos_build_env.sh \
 If the project directory isn't named `ws2023_team_3_ads_tpm`, substitute that
 with its actual path. The build script expects the directory to be located
 at `<trentos-root-directory>/sdk/demos`.
+
+# Running the setup
+
+## Starting CARLA Simulator
+
+To start the simulator with low graphics setting, use the following commands:
+
+```sh
+cd <Path To Carla directory>
+./CarlaUE4.sh -quality-level=Low
+```
 
 ## Starting the Python client
 
@@ -161,24 +159,24 @@ The following scenarios are already supplied:
     <td>
       <img src="pictures/default_scenario.png" alt="Default Scenario" width="460" height="300">
       <br>
-      <i>Default Scenario</i>
+      <i>Default Scenario</i> (`default_scenario.txt`)
     </td>
     <td>
       <img src="pictures/scenario1.png" alt="Scenario 1" width="460" height="300">
       <br>
-      <i>Scenario 1</i>
+      <i>Scenario 1</i> (`scenario1.txt`)
     </td>
   </tr>
   <tr>
     <td>
       <img src="pictures/scenario2.png" alt="Scenario 2" width="460" height="300">
       <br>
-      <i>Scenario 2</i>
+      <i>Scenario 2</i> (`scenario2.txt`)
     </td>
     <td>
       <img src="pictures/scenario3.png" alt="Scenario 3" width="460" height="300">
       <br>
-      <i>Scenario 3</i>
+      <i>Scenario 3</i> (`scenario3.txt`)
     </td>
   </tr>
 </table>
@@ -202,3 +200,5 @@ Start Picocom (substituting `/dev/ttyUSB0` with the correct path, if needed):
 ```sh
 sudo picocom -b 115200 /dev/ttyUSB0
 ```
+
+Turn on the Raspberry Pi.
