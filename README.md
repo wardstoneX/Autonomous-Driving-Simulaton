@@ -7,6 +7,12 @@ There is also more detailed information in the README files of the components:
 - [TestApp README](components/TestApp/README.md)
 - [Python Client README](python_client/README.md)
 
+Table of contents:
+- [Hardware setup](README.md#hardware-setup)
+ - [UART-to-USB adapter](README.md#uart-to-usb-adapter)
+ - [TPM](README.md#tpm)
+ - [Ethernet](README.md#ethernet)
+
 # Hardware setup
 
 ## UART-to-USB adapter
@@ -184,7 +190,7 @@ The following scenarios are already supplied:
 Refer to the [Python client README](python_client/README.md) for further
 options.
 
-## Running the TRENTOS application
+## Starting the TRENTOS application
 
 Mount the SD card, then copy over the files:
 
