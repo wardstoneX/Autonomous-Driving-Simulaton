@@ -8,13 +8,19 @@ There is also more detailed information in the README files of the components:
 - [Python Client README](python_client/README.md)
 
 Table of contents:
-- [Hardware setup](README.md#hardware-setup)
-  - [UART-to-USB adapter](README.md#uart-to-usb-adapter)
-  - [TPM](README.md#tpm)
-  - [Ethernet](README.md#ethernet)
-- [Installing dependencies](README.md#installing-dependencies)
+- [Hardware setup](#hardware-setup)
+  - [UART-to-USB adapter](#uart-to-usb-adapter)
+  - [TPM](#tpm)
+  - [Ethernet](#ethernet)
+- [Installing dependencies](#installing-dependencies)
   - [Installing Python dependencies](#installing-python-dependencies)
   - [Installing and setting up CARLA](#installing-and-setting-up-carla)
+- [Generating and importing a new cEK](#generating-and-importing-a-new-cek)
+- [Compiling the TRENTOS application](#compiling-the-trentos-application)
+- [Running the setup](#running-the-setup)
+  - [Starting CARLA Simulator](#starting-carla-simulator)
+  - [Starting the Python client](#starting-the-python-client)
+  - [Starting the TRENTOS application](#starting-the-trentos-application)
 
 # Hardware setup
 
@@ -168,24 +174,24 @@ The following scenarios are already supplied:
     <td>
       <img src="pictures/default_scenario.png" alt="Default Scenario" width="460" height="300">
       <br>
-      <i>Default Scenario</i> (`default_scenario.txt`)
+      <i>Default Scenario</i> (<code>default_scenario.txt</code>)
     </td>
     <td>
       <img src="pictures/scenario1.png" alt="Scenario 1" width="460" height="300">
       <br>
-      <i>Scenario 1</i> (`scenario1.txt`)
+      <i>Scenario 1</i> (<code>scenario1.txt</code>)
     </td>
   </tr>
   <tr>
     <td>
       <img src="pictures/scenario2.png" alt="Scenario 2" width="460" height="300">
       <br>
-      <i>Scenario 2</i> (`scenario2.txt`)
+      <i>Scenario 2</i> (<code>scenario2.txt</code>)
     </td>
     <td>
       <img src="pictures/scenario3.png" alt="Scenario 3" width="460" height="300">
       <br>
-      <i>Scenario 3</i> (`scenario3.txt`)
+      <i>Scenario 3</i> (<code>scenario3.txt</code>)
     </td>
   </tr>
 </table>
