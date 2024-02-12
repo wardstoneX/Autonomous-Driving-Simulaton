@@ -19,11 +19,9 @@
 \begin{itemize}
 \item Larger data, e.g. keys or encrypted text, get passed over the dataport
 \item Functions only take the parameters needed to process the data
-\item[$+$] No additional buffer needed inside \texttt{trentos.c}\\
-    Dataport pointer can immediately be passed to WolfTPM
+\item[$+$] No additional buffer needed, dataport pointer can immediately be passed to WolfTPM library \\
 \item[$+$] Avoids unnecessary copying of data
 \item[$-$] Dataport doesn't show up in function signature
-\item[$-$] Programmer of the client must remember to copy data out when it would otherwise be overwritten
 \end{itemize}
 \end{frame}
 
@@ -74,8 +72,7 @@ Why is this needed?
 \begin{itemize}
 \item TPM goes into Dictionary Attack Lockdown mode if improperly shut down too often
 \item CAmkES appears not to have a \texttt{pre\_shutdown()} equivalent of \texttt{pre\_init()}
-\item \texttt{SecureCommunication} also a passive component\\
-\item[$\Rightarrow$] Shutdown command must be sent by \texttt{TestApp}, can't re-use interfaces already connected to \texttt{SecureCommunication}
+\item[$\Rightarrow$] Shutdown command must be sent by \texttt{TestApp}
 \end{itemize}
 \end{frame}
 
@@ -136,14 +133,14 @@ How to clear TPM and re-create cEK on purpose?
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Loading cEK}
-Additional difficulty: a \texttt{WOLFTPM2\_KEYBLOB} is too large!
-
-\begin{itemize}
-\item One NV index can only store 2048 bytes
-\item Somehow, \texttt{sizeof(WOLFTPM\_KEYBLOB)} is \ttilde{}2300 bytes!
-\item[$\Rightarrow$] Our solution: use two NV indices
-\item[$\Rightarrow$] Better solution would've been to find out why that struct is wasting so much space
-\item[$\Rightarrow$] Time constraints made us choose worse solution\ldots
-\end{itemize}
-\end{frame}
+%\begin{frame}{Loading cEK}
+%Additional difficulty: a \texttt{WOLFTPM2\_KEYBLOB} is too large!
+%
+%\begin{itemize}
+%\item One NV index can only store 2048 bytes
+%\item Somehow, \texttt{sizeof(WOLFTPM\_KEYBLOB)} is \ttilde{}2300 bytes!
+%\item[$\Rightarrow$] Our solution: use two NV indices
+%\item[$\Rightarrow$] Better solution would've been to find out why that struct is wasting so much space
+%\item[$\Rightarrow$] Time constraints made us choose worse solution\ldots
+%\end{itemize}
+%\end{frame}
