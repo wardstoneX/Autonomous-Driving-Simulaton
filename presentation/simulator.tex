@@ -1,0 +1,80 @@
+\section{Simulator}
+
+\begin{frame}{Sensor Data Exchange 1}
+\begin{itemize}
+
+\item Data exchange in real-time using TCP
+\vspace{12pt} 
+
+\item \textbf{Problem:} Nagle's algorithm
+
+It aims to gain efficiency by reducing the number of packets that need to be sent over the network. 
+
+\item \textbf{Solution:} 
+    \begin{itemize}
+    \item Set socket option \texttt{TCP\_NODELAY} to disable Nagle's algorithm
+    \end{itemize}
+\vspace{12pt} 
+    
+\item \textbf{Problem:} Small sliding window
+
+Window size is the amount of unacknowledged data that can be in transit at any given time.
+\item \textbf{Solution:} 
+    \begin{itemize}
+    \item Buffer the sensor data before sending
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Sensor Data Exchange 2}
+\begin{itemize}
+
+\item \textbf{Problem:} Sensor data syncronisation
+
+The application doesn't know which radar detection was made at which location.
+
+\item \textbf{Solution:} 
+    \begin{itemize}
+    \item Send GNSS and Radar detections combined as pairs
+    \end{itemize}
+
+\vspace{12pt} 
+\item \textbf{Problem:} Split data pairs
+
+TCP is a byte stream protocol that doesn't preserve boundaries. \texttt{OS\_Socket\_read} could receive only half of a pair.
+
+\item \textbf{Solution:} 
+    \begin{itemize}
+    \item Add size before every pair
+    \end{itemize}
+ 
+
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Park Spot Detection \& Parking}
+\begin{itemize}
+
+
+\item \textbf{Assumptions:} 
+    \begin{itemize}
+    \item Same street, Same vehicles, Parking space between two vehicles
+    \end{itemize}
+\vspace{12pt} 
+\item Compare each detection with last detection to get distance difference
+\item If distance is big enough, parking space is found
+\vspace{12pt} 
+
+\item \textbf{Parking:} It is a fixed procedure and consists of 4 steps
+    \begin{itemize}
+    \item Stop Vehicle if parking space is found.
+    \item Do a right lane change
+    \item Drive backwards to the vehicle above parking space
+    \item Park vehicle
+
+    
+
+    \end{itemize}    
+
+\end{itemize}
+\end{frame}
