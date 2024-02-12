@@ -5,9 +5,8 @@
 \useoutertheme[subsection=false,footline=authorinstitutetitle]{miniframes}
 \beamertemplatenavigationsymbolsempty
 
-% TODO: Better title/subtitle
-\title{Project: Autonomous Driving Simulator}
-\subtitle{Using TRENTOS, CAmkES, and TPM module}
+\title{Project: Autonomous Parking}
+\subtitle{Using TRENTOS, CARLA, and TPM module}
 \author{Selim Mert Kaştan \and Alisa Parashchenko \and Mirena Flores Valdez}
 \date{13.02.2024}
 
@@ -25,6 +24,12 @@
 
 \begin{document}
 \maketitle
+
+\AtBeginSection[]{
+  \begin{frame}
+  \tableofcontents[currentsection]
+  \end{frame}
+}
 
 \include{overview.tex}
 \include{tpm.tex}

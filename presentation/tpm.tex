@@ -86,7 +86,7 @@ Our \texttt{pre\_init()} function:
 
 \begin{enumerate}
 \item Initializes BCM2837 SPI with correct parameters (MSB first, CS1, 31.25 MHz)
-\item Pulls $\overline{\mbox{RESET}}$ pin low
+\item Pulls $\overline{\mbox{RESET}}$ pin high
 \item Generates real SRK (needed for generation of other keys and for NV storage)
 \item Loads cEK into TPM\ldots
 \item Generates cSRK
@@ -120,7 +120,7 @@ If it fails:
 
 \begin{itemize}
 \item Generate new cEK (as a \texttt{WOLFTPM2\_KEYBLOB} struct)
-\item Store the struct it in the NVRAM of the TPM
+\item Store it in the NVRAM of the TPM
 \item Print a hexdump of the new key and exit
 \item Python client can import cEK using \texttt{importEK.py}
 \end{itemize}
