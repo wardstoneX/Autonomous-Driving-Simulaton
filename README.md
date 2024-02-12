@@ -175,28 +175,34 @@ If you want to create a new scenario, plase create a text file in folder `python
 
 
 
-<p align="center">
-  <img width="460" height="300" src="pictures/default_scenario.png">
-  <br>
-  <i>Default Scenario</i>
-</p>
 
-<p align="center">
-  <img width="460" height="300" src="pictures/scenario1.png">
-  <br>
-  <i>Scenario 1</i>
-</p>
-<p align="center">
-  <img width="460" height="300" src="pictures/scenario2.png">
-  <br>
-  <i>Scenario 2</i>
-</p>
-<p align="center">
-  <img width="460" height="300" src="pictures/scenario3.png">
-  <br>
-  <i>Scenario 3</i>
-</p>
 
+<table>
+  <tr>
+    <td>
+      <img src="pictures/default_scenario.png" alt="Default Scenario" width="460" height="300">
+      <br>
+      <i>Default Scenario</i>
+    </td>
+    <td>
+      <img src="pictures/scenario1.png" alt="Scenario 1" width="460" height="300">
+      <br>
+      <i>Scenario 1</i>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="pictures/scenario2.png" alt="Scenario 2" width="460" height="300">
+      <br>
+      <i>Scenario 2</i>
+    </td>
+    <td>
+      <img src="pictures/scenario3.png" alt="Scenario 3" width="460" height="300">
+      <br>
+      <i>Scenario 3</i>
+    </td>
+  </tr>
+</table>
 # Everything together
 
 
