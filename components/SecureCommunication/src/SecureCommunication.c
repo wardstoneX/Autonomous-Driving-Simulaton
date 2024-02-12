@@ -239,7 +239,7 @@ secureCommunication_rpc_socket_read(
     uint8_t plaintext[OS_DATAPORT_DEFAULT_SIZE];
     size_t read = 0;
 
-    ret = OS_Socket_read(apiHandle, buf, 12 + *pLen, &read);
+    ret = OS_Socket_read(apiHandle, buf, OS_DATAPORT_DEFAULT_SIZE, &read);
     if(ret == OS_SUCCESS) {
         Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
     } else {
@@ -354,7 +354,7 @@ secureCommunication_rpc_socket_recvfrom(
     uint8_t plaintext[OS_DATAPORT_DEFAULT_SIZE];
     size_t read = 0;
 
-    ret = OS_Socket_recvfrom(apiHandle, buf, 12 + *pLen, &read, srcAddr);
+    ret = OS_Socket_recvfrom(apiHandle, buf, OS_DATAPORT_DEFAULT_SIZE, &read, srcAddr);
     if(ret == OS_SUCCESS) {
         Debug_LOG_INFO("OS_Socket_read() - bytes read: %d, err: %d", read, ret);
     } else {
