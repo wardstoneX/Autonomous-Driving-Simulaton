@@ -128,6 +128,12 @@ cd <Path To Carla directory>
 ```
 
 # Running the Python client
+Please make sure the `numpy` and `cryptodome` packages are installed or they can be installed by running:
+
+```sh
+python3.7 -m  pip install -r pythonClient/requirements.txt
+```
+
 
 
 
@@ -162,14 +168,24 @@ If you want to create a new scenario, plase create a text file in folder `python
 
  The following scenarios are already supplied:
 
- 1) **default_scenario.txt**
- ![](pictures/default_scenario.png)
+ 1) default_scenario.txt
+ 2) scenario1.txt
+ 3) scenario2.txt
+ 4) scenario3.txt
+
+ <p align="left">
+  <img width="460" height="300" src="pictures/default_scenario.png">
+</p>
 
 
+<p align="right">
+  <img width="460" height="300" src="pictures/example_scenario.png">
+  <br>
+  <i>Your caption goes here</i>
+</p>
 
- 2) **scenario1.txt**
- ![](pictures/example_scenario.png)
 
+![alt-text-1](pictures/default_scenario.png "title-1") ![alt-text-2](pictures/example_scenario.png "title-2")
 # Everything together
 
 
