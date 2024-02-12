@@ -9,9 +9,12 @@ There is also more detailed information in the README files of the components:
 
 Table of contents:
 - [Hardware setup](README.md#hardware-setup)
- - [UART-to-USB adapter](README.md#uart-to-usb-adapter)
- - [TPM](README.md#tpm)
- - [Ethernet](README.md#ethernet)
+  - [UART-to-USB adapter](README.md#uart-to-usb-adapter)
+  - [TPM](README.md#tpm)
+  - [Ethernet](README.md#ethernet)
+- [Installing dependencies](README.md#installing-dependencies)
+  - [Installing Python dependencies](#installing-python-dependencies)
+  - [Installing and setting up CARLA](#installing-and-setting-up-carla)
 
 # Hardware setup
 
