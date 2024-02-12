@@ -139,8 +139,7 @@ sdk/scripts/open_trentos_build_env.sh \
 ```
 
 If the project directory isn't named `ws2023_team_3_ads_tpm`, substitute that
-with its actual path. The build script expects the directory to be located
-at `<trentos-root-directory>/sdk/demos`.
+with its actual path, relative to the TRENTOS root directory.
 
 # Running the setup
 
