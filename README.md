@@ -55,10 +55,8 @@ There is a pin header provided to help positioning. It is used like this:
 
 ## Ethernet
 
-Connect the Raspberry Pi and the PC using an ethernet cable, then assign the
-static IP address 10.0.0.10 to the corresponding ethernet interface.
-
-This can be done with the following command:
+Connect the Raspberry Pi and the PC using an ethernet cable. Assign the
+static IP address 10.0.0.10 to the corresponding ethernet interface:
 
 ```sh
 ip addr add 10.0.0.10/24 dev <ethernet-interface-name>
@@ -71,7 +69,7 @@ ip addr add 10.0.0.10/24 dev <ethernet-interface-name>
 Install Python 3.7. 
 
 Install `numpy` and `pycryptodome`, as the Python client depends on these
-packages. They can be installed by running:
+packages.
 
 ```sh
 python3.7 -m pip install -r python_client/requirements.txt
@@ -111,10 +109,8 @@ On the TRENTOS side, add the following at the beginning of the file
 #define CLEAR_TPM
 ```
 
-Re-compile and re-run. (See "TRENTOS application" section for detailed
-instructions, but the build process is the same as for any other TRENTOS
-application.)
-The TRENTOS application will print a hexdump of the new cEK and exit.
+Re-compile and re-run. The TRENTOS application will print a hexdump of
+the new cEK and exit.
 
 Now, the new key must be imported into the Python client. Do:
 
@@ -163,6 +159,7 @@ To launch the Python client with default parameters and the default scenario,
 do:
 
 ```sh
+cd python_client/
 python3.7 bridge.py
 ```
 
