@@ -11,7 +11,7 @@ def read_offsets_from_file(filename):
     print("Scenario is loaded from file: ", filename)
     with open(filename, 'r') as f:
         line = f.readline()
-        offsets = list(map(int, line.split('-')))
+        offsets = list(map(float, line.split('-')))
     return offsets
 
 
