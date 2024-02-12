@@ -162,30 +162,54 @@ Beware, only the map `Town06` is supported currently! Also change the server adr
 
 ## Scenario files
 
+
+<p align="center">
+  <img width="460" height="600" src="pictures/layout_explanation.jpeg">
+  <br>
+  <i>Layout Illustration</i>
+</p>
+
+
+
 If you want to create a new scenario, plase create a text file in folder `pythonClient/scenarios`, in which you need to add some numbers in the following format x<sub>1</sub>-x<sub>2</sub>-...-x<sub>n</sub> where each x<sub>i</sub> is the position of a vehicle on the side of the road. The minimum allowed distance between x<sub>i</sub> and x<sub>i-1</sub> is 5.
 
- Since the bounding box of the used vehicle is around 7 meters and a parking spot should have the minimum length of 1.5 * VehicleWidth, please make sure to type in the scenario file the minimum distance of 11  for the parking spot.
+ Since the length of the used vehicle is around 5 meters and a parking spot should have the minimum length of 1.5 * VehicleWidth, please make sure to type in the scenario file the minimum distance of 12  for the parking spot.
+
+
+
 
  The following scenarios are already supplied:
 
- 1) default_scenario.txt
- 2) scenario1.txt
- 3) scenario2.txt
- 4) scenario3.txt
-
- <p align="left">
-  <img width="460" height="300" src="pictures/default_scenario.png">
-</p>
 
 
-<p align="right">
-  <img width="460" height="300" src="pictures/example_scenario.png">
-  <br>
-  <i>Your caption goes here</i>
-</p>
 
 
-![alt-text-1](pictures/default_scenario.png "title-1") ![alt-text-2](pictures/example_scenario.png "title-2")
+<table>
+  <tr>
+    <td>
+      <img src="pictures/default_scenario.png" alt="Default Scenario" width="460" height="300">
+      <br>
+      <i>Default Scenario</i>
+    </td>
+    <td>
+      <img src="pictures/scenario1.png" alt="Scenario 1" width="460" height="300">
+      <br>
+      <i>Scenario 1</i>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="pictures/scenario2.png" alt="Scenario 2" width="460" height="300">
+      <br>
+      <i>Scenario 2</i>
+    </td>
+    <td>
+      <img src="pictures/scenario3.png" alt="Scenario 3" width="460" height="300">
+      <br>
+      <i>Scenario 3</i>
+    </td>
+  </tr>
+</table>
 # Everything together
 
 
