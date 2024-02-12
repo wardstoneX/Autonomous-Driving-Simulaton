@@ -1,3 +1,5 @@
+
+
 # Hardware setup
 
 ## UART-to-USB adapter
@@ -210,6 +212,8 @@ If you want to create a new scenario, plase create a text file in folder `python
     </td>
   </tr>
 </table>
+
+
 # Everything together
 
 
