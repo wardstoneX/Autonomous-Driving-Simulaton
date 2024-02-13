@@ -36,4 +36,5 @@ If you want to create a new scenario, plase create a text file in folder `python
 
  Since the length of the used vehicle is around 5 meters and a parking spot should have the minimum length of 1.5 * VehicleLength, please make sure to type in the scenario file the minimum distance of 12  for the parking spot.
 
-
+# Note:
+I realized i dont really need the gps sensor. However the way it could have been used is, in the radar callback `location_ = radar_data.transform.location + fw_vec`, i could get the location from the gps and add the forward vector to it. However, since its the last date, i will refrain from it. This could have been done while pairing the gps data and radar data before sending it,i could have added the forward vector to the gps location....
