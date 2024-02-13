@@ -62,6 +62,7 @@ def radar_measurement_to_cartesian(gps_position, detection_tuple):
     
     location_ =  car_location+ fw_vec          
     print(location_)
+    print("new location", location_)
 
     x = location_.x
     y = location_.y
@@ -112,6 +113,21 @@ class RadarHandler:
         for detect in radar_data:
             
             list.append((detect.depth, detect.azimuth, detect.altitude))
+            
+            current_rot = radar_data.transform.rotation
+            azi = math.degrees(detect.azimuth)
+            alt = math.degrees(detect.altitude)
+            
+            fw_vec = carla.Vector3D(x=detect.depth - 0.25)
+            carla.Transform(
+                carla.Location(),
+                carla.Rotation(
+                    pitch=current_rot.pitch + alt,
+                    yaw=current_rot.yaw + azi,
+                    roll=current_rot.roll)).transform(fw_vec)
+
+            location_ = radar_data.transform.location + fw_vec
+            print("correct location", location_)
 
         list = list[0] if list else (0, 0, 0)
         with self.radar_data_lock:
