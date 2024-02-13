@@ -40,7 +40,7 @@ def radar_measurement_to_cartesian(radar_position, detection_tuple):
     x0, y0, z0 = radar_position
     altitude, azimuth, depth = detection_tuple
 
-    // we need to rotate the forward vector correctly here...its not working currently atm
+    # we need to rotate the forward vector correctly here...its not working currently atm
 
     fw_vec = carla.Vector3D(x=depth - 0.25)
     radar_rotation = carla.Rotation(pitch=5, yaw=90, roll=0)
