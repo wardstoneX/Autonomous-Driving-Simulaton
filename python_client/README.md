@@ -32,7 +32,7 @@ Beware, only the map `Town06` is supported currently! Also change the server adr
 
 
 
-If you want to create a new scenario, plase create a text file in folder `pythonClient/scenarios`, in which you need to add some numbers in the following format x<sub>1</sub>-x<sub>2</sub>-...-x<sub>n</sub> where each x<sub>i</sub> is the offset of a vehicle on the side of the road from a base point. The minimum allowed distance between x<sub>i</sub> and x<sub>i-1</sub> is 5.
+If you want to create a new scenario, plase create a text file in folder `pythonClient/scenarios`, in which you need to add some numbers in the following format x<sub>1</sub>-x<sub>2</sub>-...-x<sub>n</sub> where each x<sub>i</sub> is the offset of a vehicle on the side of the road from a base point. The minimum allowed distance between x<sub>i</sub> and x<sub>i-1</sub> is 5. Preferable, please start with x<sub>0</sub> 0.
 
  Since the length of the used vehicle is around 5 meters and a parking spot should have the minimum length of 1.5 * VehicleLength, please make sure to type in the scenario file the minimum distance of 12  for the parking spot.
 
