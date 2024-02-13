@@ -53,8 +53,6 @@ def send_to_server(connection_socket,data1, data2):
         
         if data1[i] != (0,0,0):
             radar = radar_measurement_to_cartesian(gnss, radar)
-            print(radar)
-
 
         combined_data = f"{radar}-{gnss}"
         combined_data = combined_data.replace('(', '').replace(')', '')
