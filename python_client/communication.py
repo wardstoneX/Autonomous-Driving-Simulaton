@@ -6,6 +6,7 @@ import time
 from collections import namedtuple
 import struct
 from secureClient import setup_crypto_config, send_encrypt, recv_decrypt
+from utils import radar_measurement_to_cartesian
 
 # ControlData is a named tuple that contains the control data received from the client.
 ControlData = namedtuple('ControlData', 'throttle steer brake reverse time')
@@ -49,6 +50,11 @@ def send_to_server(connection_socket,data1, data2):
     for i in range(len(data1)):
         radar = data1[i]
         gnss = data2[i]
+        
+        if data1[i] != (0,0,0):
+            radar = radar_measurement_to_cartesian(gnss, radar)
+            print(radar)
+
 
         combined_data = f"{radar}-{gnss}"
         combined_data = combined_data.replace('(', '').replace(')', '')

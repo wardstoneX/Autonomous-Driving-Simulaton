@@ -35,22 +35,37 @@ def convert_gps_to_carla(gnss_measurement):
     
     return (float(carla_coordinates[0]), float(carla_coordinates[1]), 0.0)
 
+CURRENT_ROTATION = carla.Rotation(pitch=5, yaw=90, roll=0 )
 
-def radar_measurement_to_cartesian(radar_position, detection_tuple):
-    x0, y0, z0 = radar_position
-    altitude, azimuth, depth = detection_tuple
-
-    # we need to rotate the forward vector correctly here...its not working currently atm
-
+def radar_measurement_to_cartesian(gps_position, detection_tuple):
+    x0, y0, z0 = gps_position
+    depth, azimuth, altitude = detection_tuple
+    
+    print(gps_position, detection_tuple)
+    
+    azi = math.degrees(azimuth)
+    alt = math.degrees(altitude)
+    
+    
     fw_vec = carla.Vector3D(x=depth - 0.25)
-    radar_rotation = carla.Rotation(pitch=5, yaw=90, roll=0)
-    sensor_transform = carla.Transform(location=carla.Location(x0, y0, 2), rotation=radar_rotation)
+    
+    carla.Transform(
+        carla.Location(),
+        carla.Rotation(
+            pitch=CURRENT_ROTATION.pitch + alt,
+            yaw=CURRENT_ROTATION.yaw + azi,
+            roll=CURRENT_ROTATION.roll)).transform(fw_vec)
+    print(fw_vec)
 
-    location = sensor_transform.location + fw_vec
+    car_location = carla.Location(x=x0, y=y0, z=z0)
+    print(car_location)
+    
+    location_ =  car_location+ fw_vec          
+    print(location_)
 
-    x = location.x
-    y = location.y
-    z = location.z
+    x = location_.x
+    y = location_.y
+    z = location_.z
 
     return (x, y, z)
 
@@ -92,21 +107,11 @@ class RadarHandler:
         """
         list = []
         current_rot = radar_data.transform.rotation
+        print( current_rot)
         
         for detect in radar_data:
-            azi = math.degrees(detect.azimuth)
-            alt = math.degrees(detect.altitude)
             
-            fw_vec = carla.Vector3D(x=detect.depth - 0.25)
-            carla.Transform(
-                carla.Location(),
-                carla.Rotation(
-                    pitch=current_rot.pitch + alt,
-                    yaw=current_rot.yaw + azi,
-                    roll=current_rot.roll)).transform(fw_vec)
-
-            location_ = radar_data.transform.location + fw_vec          
-            list.append((location_.x, location_.y, location_.z))
+            list.append((detect.depth, detect.azimuth, detect.altitude))
 
         list = list[0] if list else (0, 0, 0)
         with self.radar_data_lock:
