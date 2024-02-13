@@ -77,7 +77,7 @@ class GNSSHandler:
             self.gnss_data_points.append(coordinates)
             
             
-
+# https://github.com/carla-simulator/carla/blob/master/Docs/tuto_G_retrieve_data.md was used.
 
 class RadarHandler:
     """
