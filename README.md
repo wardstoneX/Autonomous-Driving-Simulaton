@@ -1,6 +1,8 @@
 To compile and run the project, follow the sections in this README in the
 order they appear in.
 
+For the presentation video, refer to the link in `LinkToVideo.txt`.
+
 There is also more detailed information in the README files of the components:
 - [WolfTPM README](components/WolfTPM/README.md)
 - [SecureCommunication README](components/SecureCommunication/README.md)
