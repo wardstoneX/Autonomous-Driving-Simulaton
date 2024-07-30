@@ -1,3 +1,10 @@
+## Team Members
+
+- Mirena Flores Valdez
+- Selim Mert Kaştan
+- Alisa Parashchenko
+
+  
 To compile and run the project, follow the sections in this README in the
 order they appear in.
 
